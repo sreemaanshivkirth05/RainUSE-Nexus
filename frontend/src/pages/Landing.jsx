@@ -1,15 +1,35 @@
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Target, MapPin, FlaskConical, SlidersHorizontal, Rocket, Droplets, DollarSign, ShieldCheck, Gauge, ArrowRight } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
-import { TARGET_STATES } from '../utils/constants';
 import USAMap from '../components/USAMap';
+import { fetchStates, fetchSummary } from '../lib/api';
 
 /**
  * Landing Page — Introduction, Workflow, and State Selection
  */
 export default function Landing() {
   const navigate = useNavigate();
+  const [stats, setStats] = useState({ states: 0, buildings: 0 });
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const [statesRes, sumRes] = await Promise.all([
+          fetchStates(),
+          fetchSummary()
+        ]);
+        setStats({
+          states: statesRes.states?.length || 5,
+          buildings: sumRes.summary?.total_buildings || 0
+        });
+      } catch (err) {
+        console.error("Failed to load global stats:", err);
+      }
+    }
+    loadStats();
+  }, []);
 
   return (
     <PageWrapper className="pb-24">
@@ -132,7 +152,9 @@ export default function Landing() {
       <section id="state-selector" className="space-y-8 pt-16 scroll-mt-20 relative z-10 px-4">
         <div className="text-center">
           <h2 className="font-display font-medium text-4xl text-white drop-shadow-md">Regional Subsystem Mapping</h2>
-          <p className="text-indigo-200/70 mt-3 text-sm">Aggregating {TARGET_STATES.length} active node deployments across the continental layer.</p>
+          <p className="text-indigo-200/70 mt-3 text-sm">
+             Aggregating {stats.buildings > 0 ? stats.buildings.toLocaleString() : 'thousands of'} assets across {stats.states > 0 ? stats.states : 'multiple'} active node deployments across the continental layer.
+          </p>
         </div>
 
         {/* Upgraded Frame for US Map */}

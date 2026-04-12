@@ -46,6 +46,12 @@ data/processed/**
 .env
 .env.local
 *.env
+.venv/
+env/
 
-# Logs
+# Binaries & Proxy
+cloud-sql-proxy
+
+# Logs & Meta
 *.log
+.agents/

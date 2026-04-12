@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import API_TITLE, API_VERSION, API_DESCRIPTION, CORS_ORIGINS
-from app.routes import buildings, summary
+from app.routes import buildings, summary, metadata
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -27,6 +27,7 @@ app.add_middleware(
 # Register routes
 app.include_router(buildings.router)
 app.include_router(summary.router)
+app.include_router(metadata.router)
 
 
 @app.get("/health", tags=["system"])

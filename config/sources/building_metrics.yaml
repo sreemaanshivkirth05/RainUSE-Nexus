@@ -1,0 +1,83 @@
+# Source: building_metrics
+# Computed and enriched metric scores per building.
+# Joined to buildings_base via building_id.
+
+source_id: building_metrics
+label: "Building Metric Scores"
+description: "Rainwater, cooling, economic, and sustainability metric scores per building"
+priority: P0
+local_path: "sample-data/building_metrics.csv"
+gcs_path: "raw/building_metrics.csv"
+raw_table: "building_metrics"
+join_key: "building_id"
+
+columns:
+  - name: building_id
+    type: STRING
+    required: true
+    description: "Foreign key to buildings_base"
+
+  - name: roof_area_sqft
+    type: FLOAT64
+    required: true
+    description: "Effective roof catchment area in sq ft"
+
+  - name: annual_rain_inches
+    type: FLOAT64
+    required: true
+    description: "Average annual rainfall at building location"
+
+  - name: annual_capture_gallons
+    type: FLOAT64
+    required: true
+    description: "Estimated annual rainwater harvest volume"
+
+  - name: cooling_tower_score
+    type: FLOAT64
+    required: false
+    description: "Cooling tower presence likelihood (0.0–1.0)"
+
+  - name: cooling_confidence
+    type: FLOAT64
+    required: false
+    description: "Confidence in cooling tower detection (0.0–1.0)"
+
+  - name: water_cost_per_kgal
+    type: FLOAT64
+    required: false
+    description: "Local water cost in $/1000 gallons"
+
+  - name: water_stress_index
+    type: FLOAT64
+    required: false
+    description: "Regional water stress index (0.0–1.0)"
+
+  - name: flood_risk_score
+    type: FLOAT64
+    required: false
+    description: "FEMA-based flood risk (0.0–1.0)"
+
+  - name: esg_commitment_score
+    type: FLOAT64
+    required: false
+    description: "ESG/sustainability commitment (0.0–1.0)"
+
+  - name: energy_star_rating
+    type: INT64
+    required: false
+    description: "ENERGY STAR score (0–100)"
+
+  - name: leed_certified
+    type: BOOL
+    required: false
+    description: "Whether the building has LEED certification"
+
+  - name: state_policy_score
+    type: FLOAT64
+    required: false
+    description: "State rainwater policy favorability (0.0–1.0)"
+
+  - name: stormwater_fee_eligible
+    type: BOOL
+    required: false
+    description: "Eligible for stormwater fee credit"

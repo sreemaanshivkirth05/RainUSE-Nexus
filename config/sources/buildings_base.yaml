@@ -1,0 +1,93 @@
+# Source: buildings_base
+# Core building identity and physical attributes.
+# This is the foundational table that all other sources join against.
+
+source_id: buildings_base
+label: "Building Base Records"
+description: "Core building identity, location, and physical attributes"
+priority: P0
+local_path: "sample-data/buildings_base.csv"
+gcs_path: "raw/buildings_base.csv"
+raw_table: "buildings_base"
+join_key: "building_id"
+
+columns:
+  - name: building_id
+    type: STRING
+    required: true
+    description: "Unique building identifier"
+
+  - name: building_name
+    type: STRING
+    required: true
+    description: "Human-readable building name"
+
+  - name: address
+    type: STRING
+    required: false
+    description: "Street address"
+
+  - name: city
+    type: STRING
+    required: true
+    description: "City"
+
+  - name: state
+    type: STRING
+    required: true
+    description: "U.S. state"
+
+  - name: zip_code
+    type: STRING
+    required: false
+    description: "ZIP code"
+
+  - name: property_type
+    type: STRING
+    required: true
+    description: "Building classification (Office, Industrial, Healthcare, etc.)"
+
+  - name: area_sqft
+    type: FLOAT64
+    required: true
+    description: "Total building footprint area in square feet"
+
+  - name: year_built
+    type: INT64
+    required: false
+    description: "Year the building was constructed"
+
+  - name: owner_name
+    type: STRING
+    required: false
+    description: "Property owner or operator"
+
+  - name: latitude
+    type: FLOAT64
+    required: true
+    description: "Latitude coordinate"
+
+  - name: longitude
+    type: FLOAT64
+    required: true
+    description: "Longitude coordinate"
+
+  - name: stories
+    type: INT64
+    required: false
+    description: "Number of stories"
+
+  - name: roof_type
+    type: STRING
+    required: false
+    description: "Roof type (flat, pitched, etc.)"
+
+  - name: parking_spaces
+    type: INT64
+    required: false
+    description: "Number of parking spaces"
+
+  - name: updated_at
+    type: DATE
+    required: false
+    description: "Date this record was last updated"

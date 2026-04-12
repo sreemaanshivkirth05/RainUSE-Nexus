@@ -1,0 +1,21 @@
+building_id,building_name,address,city,state,zip_code,property_type,area_sqft,year_built,owner_name,latitude,longitude,stories,roof_type,parking_spaces,updated_at
+BLDG-TX-001,Texas Medical Center West Pavilion,6431 Fannin St,Houston,Texas,77030,Healthcare,185000,1978,Texas Medical Center Inc,29.7069,-95.3985,12,flat,450,2024-11-15
+BLDG-TX-002,Lone Star Industrial Park Building A,9100 Tradeway Blvd,San Antonio,Texas,78233,Industrial,220000,2001,Prologis LP,29.4241,-98.4936,1,flat,120,2024-11-15
+BLDG-TX-003,Austin Tech Campus Main,11501 Domain Dr,Austin,Texas,78758,Office,130000,2015,Kilroy Realty Corp,30.2672,-97.7431,8,flat,600,2024-11-15
+BLDG-TX-004,Silicon Hills Office Park,3900 N Capital of Texas Hwy,Austin,Texas,78746,Office,105000,2018,Brandywine Realty Trust,30.3500,-97.7500,5,flat,350,2024-11-15
+BLDG-TX-005,Dallas Distribution Hub,4500 Singleton Blvd,Dallas,Texas,75212,Warehouse,340000,1995,Duke Realty Corp,32.7767,-96.7970,1,flat,80,2024-11-15
+BLDG-GA-001,Georgia-Pacific Plaza,133 Peachtree St NE,Atlanta,Georgia,30303,Office,95000,1982,Brookfield Asset Mgmt,33.7588,-84.3880,52,flat,800,2024-11-15
+BLDG-GA-002,Savannah Port Warehouse,301 W River St,Savannah,Georgia,31401,Warehouse,280000,1998,Savannah Port Authority,32.0809,-81.0912,1,flat,60,2024-11-15
+BLDG-AZ-001,Phoenix Semiconductor Fab,5000 W Chandler Blvd,Chandler,Arizona,85226,Manufacturing,310000,2010,Intel Corporation,33.3062,-111.8413,2,flat,1200,2024-11-15
+BLDG-AZ-002,Tucson Solar Manufacturing Plant,2800 S Kolb Rd,Tucson,Arizona,85710,Manufacturing,240000,2012,First Solar Inc,32.2226,-110.9747,1,flat,400,2024-11-15
+BLDG-FL-001,Miami Convention Center,1901 Convention Center Dr,Miami Beach,Florida,33139,Convention,145000,2018,City of Miami Beach,25.7953,-80.1340,3,flat,2500,2024-11-15
+BLDG-FL-002,Tampa Bay Industrial Complex,5200 W Cypress St,Tampa,Florida,33607,Industrial,210000,2005,Tampa Bay Industrial LLC,27.9506,-82.4572,2,flat,300,2024-11-15
+BLDG-NC-001,Raleigh Data Center Campus,4700 Falls of Neuse Rd,Raleigh,North Carolina,27609,Data Center,175000,2016,QTS Realty Trust,35.7796,-78.6382,2,flat,200,2024-11-15
+BLDG-NC-002,Carolina Textile Mill Warehouse,900 N Davidson St,Charlotte,North Carolina,28206,Warehouse,195000,1965,Lincoln Harris LLC,35.2271,-80.8431,1,flat,90,2024-11-15
+BLDG-CO-001,Denver Federal Center Bldg 67,6th Ave & Kipling St,Lakewood,Colorado,80225,Government,88000,1970,US General Services Admin,39.7162,-105.1139,3,flat,500,2024-11-15
+BLDG-LA-001,Gulf Coast Refinery Support Complex,2600 Scenic Hwy,Baton Rouge,Louisiana,70805,Industrial,260000,1988,ExxonMobil Corp,30.4515,-91.1871,2,flat,350,2024-11-15
+BLDG-TX-006,FortisBio Research Campus,7000 N MoPac Expy,Austin,Texas,78731,Laboratory,98000,2020,FortisBio Inc,30.3800,-97.7600,4,flat,280,2024-11-15
+BLDG-GA-003,Hartsfield Cargo Facility B,2500 Sullivan Rd,Atlanta,Georgia,30337,Warehouse,420000,2008,City of Atlanta DOA,33.6367,-84.4278,1,flat,150,2024-11-15
+BLDG-FL-003,Orlando Distribution Center,8200 Presidents Dr,Orlando,Florida,32809,Warehouse,375000,2014,Prologis LP,28.4580,-81.4050,1,flat,180,2024-11-15
+BLDG-AZ-003,Mesa Medical Center,1601 W Southern Ave,Mesa,Arizona,85202,Healthcare,160000,2003,Banner Health,33.3922,-111.8550,6,flat,900,2024-11-15
+BLDG-TX-007,Houston Ship Channel Terminal,16502 Market St,Houston,Texas,77029,Industrial,510000,1992,Enterprise Products LP,29.7341,-95.2103,1,flat,200,2024-11-15

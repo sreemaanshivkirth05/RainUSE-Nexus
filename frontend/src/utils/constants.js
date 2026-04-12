@@ -2,12 +2,8 @@
  * RainUSE Nexus — Constants
  */
 
-// API base URL — switch to real backend when ready
-// TODO (Person 3): Toggle this to use live API
+// API base URL for the backend
 export const API_BASE_URL = 'http://localhost:8000';
-
-// Use mock data by default (set to false when backend is running)
-export const USE_MOCK_DATA = true;
 
 // Feature groups for score breakdown display
 export const FEATURE_GROUPS = [

@@ -1,21 +1,86 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
-import mockBuildings from '../data/mockBuildings.json';
 import { getScoreColor } from '../utils/formatters';
 import CountUp from '../components/CountUp';
+import { fetchBuilding, fetchBuildings } from '../lib/api';
 
 export default function Compare() {
+  const [searchParams] = useSearchParams();
   const [analyzed, setAnalyzed] = useState(false);
   
-  // Hardcoded best candidates for prototype wow moment
-  const bldg1 = mockBuildings.find(b => b.id === 'tx-dfw-015') || mockBuildings[0]; 
-  const bldg2 = mockBuildings.find(b => b.id === 'fl-mia-032') || mockBuildings[1];
-  
-  const winnerId = bldg1.final_viability_score > bldg2.final_viability_score ? bldg1.id : bldg2.id;
+  const [bldg1, setBldg1] = useState(null);
+  const [bldg2, setBldg2] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function loadComparisons() {
+      setLoading(true);
+      setError(null);
+      try {
+        const id1 = searchParams.get('id1');
+        const id2 = searchParams.get('id2');
+
+        if (id1 && id2) {
+          const [res1, res2] = await Promise.all([
+            fetchBuilding(id1).catch(() => null),
+            fetchBuilding(id2).catch(() => null)
+          ]);
+          if (res1 && res2) {
+            setBldg1(res1);
+            setBldg2(res2);
+          } else {
+             setError("One or both requested building IDs could not be found.");
+          }
+        } else {
+          // Default: load top 2 overall ranking buildings
+          const data = await fetchBuildings('sort_by=final_viability_score&sort_order=desc&page_size=2');
+          if (data.buildings && data.buildings.length >= 2) {
+            setBldg1(data.buildings[0]);
+            setBldg2(data.buildings[1]);
+          } else {
+            setError("Not enough data available to run simulation.");
+          }
+        }
+      } catch (err) {
+        setError(err.message || "Failed to load buildings for comparison");
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadComparisons();
+  }, [searchParams]);
+
+  if (loading) {
+    return (
+      <PageWrapper className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-emerald-500" />
+        <div className="text-zinc-500 text-sm">Gathering comparative analytics...</div>
+      </PageWrapper>
+    );
+  }
+
+  if (error || !bldg1 || !bldg2) {
+    return (
+      <PageWrapper className="flex flex-col items-center justify-center min-h-[60vh]">
+        <div className="text-red-400 mb-2">Error</div>
+        <div className="text-center text-zinc-400">{error || "Failed to load building data"}</div>
+      </PageWrapper>
+    );
+  }
+
+  const s1 = parseFloat(bldg1.final_viability_score);
+  const s2 = parseFloat(bldg2.final_viability_score);
+  const winnerId = s1 > s2 ? bldg1.id : bldg2.id;
 
   const renderMetricBar = (label, val1, val2, format = (v) => v) => {
-    const maxVal = Math.max(val1, val2);
+    const num1 = parseFloat(val1);
+    const num2 = parseFloat(val2);
+    const maxVal = Math.max(num1, num2) || 1; // avoid divide by zero
+    
     return (
       <div className="mb-6 relative">
         <h4 className="text-sm text-gray-500 mb-3 text-center">{label}</h4>
@@ -23,7 +88,7 @@ export default function Compare() {
            <div className="w-1/2 flex justify-end pr-1">
              <motion.div 
                 initial={{ width: 0 }} 
-                animate={{ width: `${(val1 / maxVal) * 100}%` }} 
+                animate={{ width: `${(num1 / maxVal) * 100}%` }} 
                 transition={{ duration: 1, ease: "easeOut" }}
                 className="h-3 bg-blue-500 rounded-l-full" 
              />
@@ -32,21 +97,22 @@ export default function Compare() {
            <div className="w-1/2 flex justify-start pl-1">
              <motion.div 
                 initial={{ width: 0 }} 
-                animate={{ width: `${(val2 / maxVal) * 100}%` }} 
+                animate={{ width: `${(num2 / maxVal) * 100}%` }} 
                 transition={{ duration: 1, ease: "easeOut" }}
                 className="h-3 bg-emerald-500 rounded-r-full" 
              />
            </div>
         </div>
         <div className="flex justify-between mt-2 text-xs font-bold font-mono px-4">
-           <span className="text-blue-400">{format(val1)}</span>
-           <span className="text-emerald-400">{format(val2)}</span>
+           <span className="text-blue-400">{format(num1)}</span>
+           <span className="text-emerald-400">{format(num2)}</span>
         </div>
       </div>
     );
   };
 
   const renderCard = (building, isWinner, isLoser) => {
+    const score = parseFloat(building.final_viability_score);
     return (
       <motion.div
         layout
@@ -70,15 +136,15 @@ export default function Compare() {
         <div className="flex justify-between items-end border-b border-white/5 pb-6 mb-6">
            <div>
              <div className="text-[10px] uppercase tracking-widest font-mono text-zinc-600 mb-1">Viability Match</div>
-             <div className={`text-5xl font-display font-medium ${getScoreColor(building.final_viability_score/100)}`}>
-               <CountUp to={building.final_viability_score} duration={1.5} />
+             <div className={`text-5xl font-display font-medium ${getScoreColor(score/100)}`}>
+               <CountUp to={score} duration={1.5} />
              </div>
            </div>
         </div>
         
         <div className="space-y-4">
            <div className="text-sm text-zinc-400 leading-relaxed italic border-l block border-emerald-500/30 pl-4 py-2 bg-zinc-900/50">
-             "{building.explanation}"
+             "{building.explanation || 'No descriptive analysis available for this asset.'}"
            </div>
         </div>
       </motion.div>

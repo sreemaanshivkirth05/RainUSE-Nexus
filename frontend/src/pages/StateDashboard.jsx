@@ -1,107 +1,178 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowRight, Activity, Building2, Droplets, MapPin, ChevronLeft, FileSearch } from 'lucide-react';
+import { Activity, Building2, Droplets, MapPin, ChevronLeft, FileSearch, ArrowRight, Loader2 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import BuildingFilters from '../components/buildings/BuildingFilters';
 import CountUp from '../components/CountUp';
 import { formatGallons, getScoreClass } from '../utils/formatters';
-import mockSummary from '../data/mockSummary.json';
-import mockBuildings from '../data/mockBuildings.json';
+import { fetchSummary, fetchBuildings, fetchFilterMetadata } from '../lib/api';
+
+const ITEMS_PER_PAGE = 5;
 
 export default function StateDashboard() {
   const { stateId } = useParams();
   const navigate = useNavigate();
   
+  const [stateData, setStateData] = useState(null);
+  const [cityData, setCityData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [metadata, setMetadata] = useState(null);
+
   const [selectedCity, setSelectedCity] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const [drillDownBuildings, setDrillDownBuildings] = useState([]);
+  const [drillDownLoading, setDrillDownLoading] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
+
   const [filters, setFilters] = useState({
-    state: '',
-    minRoofArea: '',
-    roofOver100k: false,
-    minRainfall: '',
-    minHarvest: '',
-    requireCooling: false,
-    highWaterCost: false,
-    highFloodRisk: false,
-    requireESG: false,
-    requireLEED: false,
-    requireEnergyStar: false,
+    state: stateId || "",
+    city: "",
+    min_score: "",
+    max_score: "",
+    opportunity_type: "",
+    roof_area_min: "",
+    roof_area_max: "",
+    rainfall_min: "",
+    rainfall_max: "",
+    capture_min: "",
+    capture_max: "",
+    cooling_confidence_min: "",
+    water_cost_min: "",
+    flood_score_min: "",
+    water_stress_min: "",
+    esg_min: "",
+    leed_min: "",
+    energy_star_min: "",
+    sort_by: "final_viability_score",
+    sort_order: "desc",
+    page: 1,
+    page_size: ITEMS_PER_PAGE
   });
 
-  const normalizedStateId = stateId?.toLowerCase();
-  const stateData = mockSummary.state_summaries.find(
-    s => s.state.toLowerCase() === normalizedStateId
-  );
-  
-  const stateBuildings = mockBuildings.filter(
-    b => b.state.toLowerCase() === normalizedStateId
-  );
+  // Load initial state aggregates and metadata
+  useEffect(() => {
+    async function loadStateInsights() {
+      setLoading(true);
+      try {
+        const [sumRes, metaRes, bldgsRes] = await Promise.all([
+          fetchSummary(),
+          fetchFilterMetadata(),
+          fetchBuildings(`state=${stateId}&page_size=5000`)
+        ]);
+        
+        setMetadata(metaRes);
+        
+        const backendStateSum = sumRes.state_summaries?.find(
+          s => s.state.toLowerCase() === stateId.toLowerCase()
+        );
+        
+        const allBuildings = bldgsRes.buildings || [];
+        
+        let sumRain = 0;
+        let rainCount = 0;
+        let globalOppCounts = {};
+        
+        const cityInsightsMap = allBuildings.reduce((acc, b) => {
+          if (b.annual_rain_inches !== null && b.annual_rain_inches !== undefined) {
+            sumRain += parseFloat(b.annual_rain_inches);
+            rainCount++;
+          }
+          
+          const opp = b.opportunity_type || 'Balanced Opportunity';
+          globalOppCounts[opp] = (globalOppCounts[opp] || 0) + 1;
+          
+          const city = b.city || 'Unknown';
+          if (!acc[city]) {
+            acc[city] = { name: city, building_count: 0, total_capture: 0, total_score: 0, opportunities: {} };
+          }
+          acc[city].building_count += 1;
+          acc[city].total_capture += parseFloat(b.annual_capture_gallons || 0);
+          acc[city].total_score += parseFloat(b.final_viability_score || 0);
+          acc[city].opportunities[opp] = (acc[city].opportunities[opp] || 0) + 1;
+          return acc;
+        }, {});
+        
+        let dominantStateOpp = 'Balanced Opportunity';
+        let maxGlobalCount = 0;
+        Object.entries(globalOppCounts).forEach(([opp, c]) => {
+           if (c > maxGlobalCount) { maxGlobalCount = c; dominantStateOpp = opp; }
+        });
 
-  const filteredCityBuildings = useMemo(() => {
-    if (!selectedCity) return [];
-    
-    return stateBuildings.filter(b => {
-      if (b.city !== selectedCity) return false;
-      if (filters.state && b.state !== filters.state) return false;
-      if (filters.minRoofArea && b.roof_area_sqft < parseInt(filters.minRoofArea)) return false;
-      if (filters.roofOver100k && !b.roof_over_100k) return false;
-      if (filters.minRainfall && b.annual_rain_inches < parseInt(filters.minRainfall)) return false;
-      if (filters.minHarvest && b.annual_capture_gallons < parseInt(filters.minHarvest)) return false;
-      if (filters.requireCooling && b.cooling_tower_score < 0.7) return false;
-      if (filters.highWaterCost && b.water_cost_score < 0.7) return false;
-      if (filters.highFloodRisk && b.flood_score < 0.7) return false;
-      if (filters.requireESG && b.esg_score < 0.5) return false;
-      if (filters.requireLEED && b.leed_score < 0.5) return false;
-      if (filters.requireEnergyStar && b.energy_star_score < 0.5) return false;
-      return true;
-    }).slice(0, 20); // strict top 20 constraint
-  }, [selectedCity, stateBuildings, filters]);
+        const cData = Object.values(cityInsightsMap).map(city => {
+          let dominantOpp = '';
+          let maxCount = 0;
+          Object.entries(city.opportunities).forEach(([opp, count]) => {
+            if (count > maxCount) {
+              maxCount = count;
+              dominantOpp = opp;
+            }
+          });
+          return {
+            name: city.name,
+            building_count: city.building_count,
+            total_capture: city.total_capture,
+            avg_score: Math.round(city.total_score / city.building_count),
+            dominant_opportunity: dominantOpp
+          };
+        }).sort((a, b) => b.avg_score - a.avg_score);
 
-  // Group and aggregate data geographically by city
-  const cityInsightsMap = stateBuildings.reduce((acc, b) => {
-    const city = b.city || 'Unknown';
-    if (!acc[city]) {
-      acc[city] = {
-        name: city,
-        building_count: 0,
-        total_capture: 0,
-        total_score: 0,
-        opportunities: {}
-      };
-    }
-    acc[city].building_count += 1;
-    acc[city].total_capture += b.annual_capture_gallons || 0;
-    acc[city].total_score += b.final_viability_score || 0;
-    
-    // Count opportunity types to find the dominant one later
-    const opp = b.opportunity_type || 'Balanced Opportunity';
-    acc[city].opportunities[opp] = (acc[city].opportunities[opp] || 0) + 1;
-    
-    return acc;
-  }, {});
-
-  // Compute final average and dominant traits for each city
-  const cityData = Object.values(cityInsightsMap).map(city => {
-    // Determine the most frequent opportunity
-    let dominantOpp = '';
-    let maxCount = 0;
-    for (const [opp, count] of Object.entries(city.opportunities)) {
-      if (count > maxCount) {
-        maxCount = count;
-        dominantOpp = opp;
+        setCityData(cData);
+        
+        setStateData({
+           state: backendStateSum?.state || stateId,
+           building_count: backendStateSum?.total_buildings || allBuildings.length,
+           avg_rainfall_inches: rainCount > 0 ? (sumRain / rainCount).toFixed(1) : 0,
+           total_capture_gallons: backendStateSum?.total_capture || 0,
+           avg_viability_score: backendStateSum?.avg_score ? Math.round(backendStateSum.avg_score) : 0,
+           dominant_opportunity: dominantStateOpp
+        });
+        
+      } catch (err) {
+        console.error("Failed to load state insights", err);
+      } finally {
+        setLoading(false);
       }
     }
+    loadStateInsights();
+  }, [stateId]);
 
-    return {
-      name: city.name,
-      building_count: city.building_count,
-      total_capture: city.total_capture,
-      avg_score: Math.round(city.total_score / city.building_count),
-      dominant_opportunity: dominantOpp
-    };
-  }).sort((a, b) => b.avg_score - a.avg_score);
+  // Load drill down data when filters/selectedCity change
+  useEffect(() => {
+    if (!selectedCity) return;
+    
+    async function loadDrillDown() {
+      setDrillDownLoading(true);
+      try {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([k, v]) => {
+          if (v !== "" && v !== null && v !== undefined) {
+             params.append(k, v);
+          }
+        });
+        
+        params.set('state', stateId);
+        params.set('city', selectedCity);
+        
+        const data = await fetchBuildings(params.toString());
+        setDrillDownBuildings(data.buildings || []);
+        setTotalPages(Math.ceil((data.count || 0) / filters.page_size));
+      } catch (err) {
+        console.error(err);
+        setDrillDownBuildings([]);
+      } finally {
+        setDrillDownLoading(false);
+      }
+    }
+    loadDrillDown();
+  }, [selectedCity, filters, stateId]);
+
+  if (loading) {
+    return (
+      <div className="py-32 flex flex-col items-center justify-center text-zinc-500">
+        <Loader2 className="w-10 h-10 animate-spin mb-4 text-emerald-500" />
+        <p>Loading state insights...</p>
+      </div>
+    );
+  }
 
   if (!stateData) {
     return (
@@ -137,7 +208,7 @@ export default function StateDashboard() {
             </div>
             <p className="text-zinc-500 mt-3 text-lg">Strategic water reuse analysis for {stateData.building_count} commercial assets.</p>
           </div>
-          <Link to="/buildings" className="flex-shrink-0 px-6 py-2.5 bg-zinc-100 text-black font-semibold rounded shadow hover:bg-white transition-all text-sm flex items-center gap-2">
+          <Link to={`/buildings?state=${encodeURIComponent(stateId)}`} className="flex-shrink-0 px-6 py-2.5 bg-zinc-100 text-black font-semibold rounded shadow hover:bg-white transition-all text-sm flex items-center gap-2">
             View All Data <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -156,7 +227,7 @@ export default function StateDashboard() {
             </div>
             <div className="flex items-baseline gap-1">
               <span className="text-3xl font-display font-medium text-zinc-100 tracking-tight">
-                <CountUp to={kpi.value} />
+                <CountUp to={parseFloat(kpi.value)} />
               </span>
               <span className="text-sm font-medium text-zinc-500">{kpi.suffix}</span>
             </div>
@@ -191,7 +262,7 @@ export default function StateDashboard() {
                           key={city.name} 
                           onClick={() => {
                             setSelectedCity(city.name);
-                            setCurrentPage(1);
+                            setFilters(prev => ({ ...prev, page: 1, city: city.name }));
                           }}
                           className="border-b border-white/5 hover:bg-zinc-900/50 cursor-pointer transition-colors group"
                         >
@@ -221,7 +292,7 @@ export default function StateDashboard() {
                 {cityData.length > 0 && (
                   <div className="mt-6 text-center">
                     <button 
-                      onClick={() => navigate('/buildings')}
+                      onClick={() => navigate(`/buildings?state=${encodeURIComponent(stateId)}`)}
                       className="px-5 py-2.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-medium transition-colors border border-white/5"
                     >
                       Analyze all {stateData.building_count} regional assets
@@ -236,7 +307,7 @@ export default function StateDashboard() {
                   <button 
                     onClick={() => {
                       setSelectedCity(null);
-                      setCurrentPage(1);
+                      setFilters(prev => ({ ...prev, page: 1, city: "" }));
                     }}
                     className="flex shrink-0 items-center justify-center w-8 h-8 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors border border-transparent hover:border-white/5"
                   >
@@ -244,113 +315,114 @@ export default function StateDashboard() {
                   </button>
                   <div>
                     <h3 className="font-display font-medium text-zinc-200">{selectedCity} Top Candidates</h3>
-                    <p className="text-xs text-zinc-500 mt-0.5">Filtering {stateBuildings.filter(b => b.city === selectedCity).length} structures inside {selectedCity}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">Exploring prospects in {selectedCity}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
                   {/* Internal Filters specific to City */}
                   <div className="lg:col-span-1 h-full hidden lg:block">
-                    <BuildingFilters filters={filters} onFilterChange={(newFilters) => {
-                      setFilters(newFilters);
-                      setCurrentPage(1); // reset pagination when filtering
-                    }} />
+                    <BuildingFilters 
+                       filters={filters} 
+                       metadata={metadata}
+                       onFilterChange={(newFilters) => {
+                         setFilters(newFilters);
+                       }} 
+                    />
                   </div>
 
                   {/* Filtered Building Output View */}
                   <div className="lg:col-span-3">
-                    {(() => {
-                      const totalPages = Math.ceil(filteredCityBuildings.length / itemsPerPage);
-                      const currentBuildings = filteredCityBuildings.slice(
-                        (currentPage - 1) * itemsPerPage, 
-                        currentPage * itemsPerPage
-                      );
-
-                      if (filteredCityBuildings.length === 0) {
-                        return (
+                    {drillDownLoading ? (
+                       <div className="py-20 flex justify-center">
+                          <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+                       </div>
+                    ) : (
+                      <>
+                        {drillDownBuildings.length === 0 ? (
                           <div className="text-center py-20 bg-zinc-900/30 rounded border border-white/5 border-dashed">
                             <FileSearch className="w-12 h-12 text-zinc-700 mx-auto mb-5" />
                             <p className="text-zinc-300 mb-2 font-medium text-lg">No prospects match your criteria</p>
                             <p className="text-zinc-600 text-sm mb-6 max-w-sm mx-auto">Try lowering utility limits or unchecking constraints.</p>
                             <button 
                               onClick={() => {
-                                setFilters({state: '', roofOver100k: false, requireCooling: false, highWaterCost: false, highFloodRisk: false, requireESG: false, requireLEED: false, requireEnergyStar: false, minRoofArea:'', minRainfall:'', minHarvest:''});
-                                setCurrentPage(1);
+                                setFilters(prev => ({
+                                   ...prev, min_score: '', max_score: '', opportunity_type: '',
+                                   roof_area_min: '', capture_min: '', cooling_confidence_min: '',
+                                   water_cost_min: '', flood_score_min: '', water_stress_min: '',
+                                   esg_min: '', leed_min: '', energy_star_min: '', page: 1
+                                }));
                               }}
                               className="px-6 py-2 flex items-center gap-2 mx-auto rounded border border-white/5 bg-zinc-900 hover:bg-zinc-800 hover:border-white/10 text-zinc-300 transition-all text-sm"
                             >
                               Clear Parameters
                             </button>
                           </div>
-                        );
-                      }
-
-                      return (
-                        <>
-                          {/* Mobile Filter toggle spacer handling would go here, omitting for density as it wasn't requested */}
-                          <div className="overflow-x-auto rounded border border-white/5 bg-zinc-900/10">
-                            <table className="w-full text-sm text-left whitespace-nowrap">
-                              <thead className="text-[10px] text-zinc-500 uppercase font-mono tracking-widest border-b border-white/5">
-                                <tr>
-                                  <th className="px-4 py-3 font-medium">Rank</th>
-                                  <th className="px-4 py-3 font-medium">Building Name</th>
-                                  <th className="px-4 py-3 font-medium hidden sm:table-cell">Opportunity Type</th>
-                                  <th className="px-4 py-3 font-medium text-right">Harvest</th>
-                                  <th className="px-4 py-3 font-medium text-right">Score</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {currentBuildings.map((building, i) => {
-                                  const globalRank = (currentPage - 1) * itemsPerPage + i + 1;
-                                  return (
-                                    <tr 
-                                      key={building.id}
-                                      onClick={() => navigate(`/buildings/${building.id}`)}
-                                      className="border-b border-white/5 hover:bg-zinc-900/50 cursor-pointer transition-colors group"
-                                    >
-                                      <td className="px-4 py-4 text-zinc-600 font-mono">#{globalRank}</td>
-                                      <td className="px-4 py-4 font-medium text-zinc-200 group-hover:text-emerald-400 transition-colors">
-                                        {building.name}
-                                      </td>
-                                      <td className="px-4 py-4 text-zinc-400 hidden sm:table-cell text-xs max-w-[200px] truncate">
-                                        {building.opportunity_type}
-                                      </td>
-                                      <td className="px-4 py-4 text-zinc-400 text-right font-mono text-xs">
-                                        {formatGallons(building.annual_capture_gallons)}
-                                      </td>
-                                      <td className="px-4 py-4 text-right">
-                                        <span className={`score-badge px-2 py-0.5 ${getScoreClass(building.final_viability_score)} min-w-[3rem] text-center inline-block`}>
-                                          {building.final_viability_score}
-                                        </span>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
-
-                          {/* Mathematical Pagination */}
-                          {totalPages > 1 && (
-                            <div className="flex justify-center items-center gap-2 mt-6">
-                              {[...Array(totalPages)].map((_, i) => (
-                                <button
-                                  key={i}
-                                  onClick={() => setCurrentPage(i + 1)}
-                                  className={`h-8 w-8 rounded flex items-center justify-center text-xs font-medium border transition-colors ${
-                                    currentPage === i + 1 
-                                      ? 'bg-zinc-800 border-white/10 text-white' 
-                                      : 'border-transparent hover:bg-zinc-800 hover:border-white/5 text-zinc-500 hover:text-zinc-300'
-                                  }`}
-                                >
-                                  {i + 1}
-                                </button>
-                              ))}
+                        ) : (
+                          <>
+                            <div className="overflow-x-auto rounded border border-white/5 bg-zinc-900/10">
+                              <table className="w-full text-sm text-left whitespace-nowrap">
+                                <thead className="text-[10px] text-zinc-500 uppercase font-mono tracking-widest border-b border-white/5">
+                                  <tr>
+                                    <th className="px-4 py-3 font-medium">Rank</th>
+                                    <th className="px-4 py-3 font-medium">Building Name</th>
+                                    <th className="px-4 py-3 font-medium hidden sm:table-cell">Opportunity Type</th>
+                                    <th className="px-4 py-3 font-medium text-right">Harvest</th>
+                                    <th className="px-4 py-3 font-medium text-right">Score</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {drillDownBuildings.map((building, i) => {
+                                    const globalRank = (filters.page - 1) * filters.page_size + i + 1;
+                                    return (
+                                      <tr 
+                                        key={building.id}
+                                        onClick={() => navigate(`/buildings/${building.id}`)}
+                                        className="border-b border-white/5 hover:bg-zinc-900/50 cursor-pointer transition-colors group"
+                                      >
+                                        <td className="px-4 py-4 text-zinc-600 font-mono">#{globalRank}</td>
+                                        <td className="px-4 py-4 font-medium text-zinc-200 group-hover:text-emerald-400 transition-colors">
+                                          {building.name}
+                                        </td>
+                                        <td className="px-4 py-4 text-zinc-400 hidden sm:table-cell text-xs max-w-[200px] truncate">
+                                          {building.opportunity_type}
+                                        </td>
+                                        <td className="px-4 py-4 text-zinc-400 text-right font-mono text-xs">
+                                          {formatGallons(building.annual_capture_gallons)}
+                                        </td>
+                                        <td className="px-4 py-4 text-right">
+                                          <span className={`score-badge px-2 py-0.5 ${getScoreClass(building.final_viability_score)} min-w-[3rem] text-center inline-block`}>
+                                            {building.final_viability_score}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
                             </div>
-                          )}
-                        </>
-                      );
-                    })()}
+
+                            {totalPages > 1 && (
+                              <div className="flex justify-center items-center gap-2 mt-6">
+                                {[...Array(totalPages)].map((_, i) => (
+                                  <button
+                                    key={i}
+                                    onClick={() => setFilters(prev => ({ ...prev, page: i + 1 }))}
+                                    className={`h-8 w-8 rounded flex items-center justify-center text-xs font-medium border transition-colors ${
+                                      filters.page === i + 1 
+                                        ? 'bg-zinc-800 border-white/10 text-white' 
+                                        : 'border-transparent hover:bg-zinc-800 hover:border-white/5 text-zinc-500 hover:text-zinc-300'
+                                    }`}
+                                  >
+                                    {i + 1}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
