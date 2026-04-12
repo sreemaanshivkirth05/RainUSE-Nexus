@@ -1,0 +1,15 @@
+data/processed/buildings_base.csv filter=lfs diff=lfs merge=lfs -text
+data/processed/buildings_geometry_features.csv filter=lfs diff=lfs merge=lfs -text
+data/processed/buildings_scored.csv filter=lfs diff=lfs merge=lfs -text
+data/processed/buildings_scored.json filter=lfs diff=lfs merge=lfs -text
+data/processed/buildings_stage1.csv filter=lfs diff=lfs merge=lfs -text
+data/processed/buildings_stage2.csv filter=lfs diff=lfs merge=lfs -text
+data/processed/buildings_stage2b.csv filter=lfs diff=lfs merge=lfs -text
+data/processed/imagery_review_demo_shortlist.csv filter=lfs diff=lfs merge=lfs -text
+data/processed/imagery_review_top_100_by_state.csv filter=lfs diff=lfs merge=lfs -text
+data/processed/imagery_review_top_500.csv filter=lfs diff=lfs merge=lfs -text
+data/processed/summary.json filter=lfs diff=lfs merge=lfs -text
+data/processed/top_100_by_state.csv filter=lfs diff=lfs merge=lfs -text
+data/processed/top_100_by_state.json filter=lfs diff=lfs merge=lfs -text
+data/processed/top_500_buildings.csv filter=lfs diff=lfs merge=lfs -text
+data/processed/top_500_buildings.json filter=lfs diff=lfs merge=lfs -text
