@@ -24,6 +24,11 @@ Thumbs.db
 data/raw/**
 !data/raw/README.md
 
+# Processed data: keep only app-consumed outputs in git
+data/processed/**
+!data/processed/buildings_scored.json
+!data/processed/summary.json
+
 # Environment
 .env
 .env.local
