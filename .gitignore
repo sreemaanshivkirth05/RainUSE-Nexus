@@ -24,10 +24,19 @@ Thumbs.db
 data/raw/**
 !data/raw/README.md
 
-# Processed data: keep only app-consumed outputs in git
+# Processed data: commit only approved outputs
 data/processed/**
+!data/processed/buildings_stage2b.csv
+!data/processed/buildings_scored.csv
 !data/processed/buildings_scored.json
+!data/processed/top_500_buildings.csv
+!data/processed/top_100_by_state.csv
 !data/processed/summary.json
+!data/processed/imagery_review_demo_shortlist.csv
+!data/processed/imagery_review_top_500.csv
+!data/processed/imagery_review_top_100_by_state.csv
+!data/processed/buildings_geometry_features.csv
+!data/processed/buildings_geometry_summary.csv
 
 # Environment
 .env
