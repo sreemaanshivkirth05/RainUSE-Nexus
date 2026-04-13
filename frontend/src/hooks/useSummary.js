@@ -66,10 +66,10 @@ export function useStates() {
     async function load() {
       try {
         const res = await apiClient.states();
-        if (!cancelled) setStates(res.states ?? []);
+        if (!cancelled) setStates((res.states ?? []).map((s) => (typeof s === 'string' ? s : s.state)));
       } catch (err) {
         if (!cancelled) {
-          setStates(mockSummaryData.state_summaries ?? []);
+          setStates((mockSummaryData.state_summaries ?? []).map((s) => (typeof s === 'string' ? s : s.state)));
           setError(err.message || 'Using demo data');
         }
       } finally {

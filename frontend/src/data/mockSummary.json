@@ -1,0 +1,21 @@
+{
+  "total_states": 22,
+  "total_buildings": 15,
+  "buildings_over_100k": 10,
+  "average_viability_score": 64.5,
+  "top_state": "Texas",
+  "total_annual_capture_gallons": 85000000,
+  "top_buildings_preview": [],
+  "state_summaries": [
+    { "state": "Texas", "total_buildings": 4, "avg_score": 66.0, "total_capture": 28000000, "max_score": 79 },
+    { "state": "Florida", "total_buildings": 2, "avg_score": 68.5, "total_capture": 14000000, "max_score": 73 },
+    { "state": "Georgia", "total_buildings": 1, "avg_score": 61.0, "total_capture": 7000000, "max_score": 61 },
+    { "state": "North Carolina", "total_buildings": 1, "avg_score": 58.0, "total_capture": 6000000, "max_score": 58 },
+    { "state": "Illinois", "total_buildings": 1, "avg_score": 55.0, "total_capture": 5000000, "max_score": 55 },
+    { "state": "West Virginia", "total_buildings": 1, "avg_score": 72.0, "total_capture": 9000000, "max_score": 72 },
+    { "state": "Oklahoma", "total_buildings": 1, "avg_score": 48.0, "total_capture": 4000000, "max_score": 48 },
+    { "state": "Maryland", "total_buildings": 1, "avg_score": 63.0, "total_capture": 6000000, "max_score": 63 },
+    { "state": "New Mexico", "total_buildings": 1, "avg_score": 57.0, "total_capture": 4500000, "max_score": 57 },
+    { "state": "Kentucky", "total_buildings": 2, "avg_score": 60.5, "total_capture": 7500000, "max_score": 65 }
+  ]
+}
