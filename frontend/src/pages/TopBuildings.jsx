@@ -14,7 +14,7 @@ import { useStates } from '../hooks/useSummary';
 export default function TopBuildings() {
   const navigate = useNavigate();
 
-  const { buildings, loading: buildingsLoading, error } = useTopBuildings(500);
+  const { buildings, loading: buildingsLoading, error } = useTopBuildings(1000);
   const { states,    loading: statesLoading }           = useStates();
   const loading = buildingsLoading || statesLoading;
 

@@ -19,8 +19,20 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
-BUILDINGS_PATH = PROCESSED_DATA_DIR / "buildings_scored.json"
-SUMMARY_PATH = PROCESSED_DATA_DIR / "summary.json"
+BUILDINGS_PATH     = PROCESSED_DATA_DIR / "buildings_scored.json"
+SUMMARY_PATH       = PROCESSED_DATA_DIR / "summary.json"
+
+# New primary outputs
+TOP_1000_JSON         = PROCESSED_DATA_DIR / "top_1000_buildings.json"
+TOP_1000_CSV          = PROCESSED_DATA_DIR / "top_1000_buildings.csv"
+TOP_500_BY_STATE_JSON = PROCESSED_DATA_DIR / "top_500_by_state.json"
+TOP_500_BY_STATE_CSV  = PROCESSED_DATA_DIR / "top_500_by_state.csv"
+
+# Backward-compat outputs (kept so existing API/code doesn't break)
+TOP_500_JSON          = PROCESSED_DATA_DIR / "top_500_buildings.json"
+TOP_500_CSV           = PROCESSED_DATA_DIR / "top_500_buildings.csv"
+TOP_100_BY_STATE_JSON = PROCESSED_DATA_DIR / "top_100_by_state.json"
+TOP_100_BY_STATE_CSV  = PROCESSED_DATA_DIR / "top_100_by_state.csv"
 
 
 def build_summary(buildings: list[dict]) -> dict:
@@ -114,6 +126,26 @@ def build_summary(buildings: list[dict]) -> dict:
     }
 
 
+def _write_json(path: Path, data) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+    print(f"  Wrote {path.name} ({len(data) if isinstance(data, list) else '—'} records)")
+
+
+def _write_csv(path: Path, records: list[dict]) -> None:
+    import csv
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not records:
+        path.write_text("")
+        return
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=records[0].keys())
+        writer.writeheader()
+        writer.writerows(records)
+    print(f"  Wrote {path.name} ({len(records)} rows)")
+
+
 def main():
     """Build processed output files."""
     print("=" * 60)
@@ -136,11 +168,49 @@ def main():
         json.dump(summary, f, indent=2)
 
     print(f"\nSummary stats:")
-    print(f"  States: {summary['total_states']}")
+    print(f"  States:    {summary['total_states']}")
     print(f"  Buildings: {summary['total_buildings']}")
     print(f"  Avg Score: {summary['average_viability_score']}")
     print(f"  Top State: {summary['top_state']}")
     print(f"  Total Capture: {summary['total_annual_capture_gallons']:,.0f} gallons")
+
+    # --- Top-1000 global ---
+    print("\nGenerating top-1000 and top-500-per-state output files...")
+    sorted_bldgs = sorted(buildings, key=lambda b: b.get("final_viability_score", 0), reverse=True)
+
+    top_1000 = sorted_bldgs[:1000]
+    _write_json(TOP_1000_JSON, top_1000)
+    _write_csv(TOP_1000_CSV, top_1000)
+
+    # Backward-compat top-500
+    top_500 = sorted_bldgs[:500]
+    _write_json(TOP_500_JSON, top_500)
+    _write_csv(TOP_500_CSV, top_500)
+
+    # --- Top-500 per state ---
+    state_groups: dict[str, list] = defaultdict(list)
+    for b in sorted_bldgs:
+        state_groups[b.get("state", "Unknown")].append(b)
+
+    top_500_by_state = []
+    top_100_by_state = []
+    for state_bldgs in state_groups.values():
+        top_500_by_state.extend(state_bldgs[:500])
+        top_100_by_state.extend(state_bldgs[:100])
+
+    _write_json(TOP_500_BY_STATE_JSON, top_500_by_state)
+    _write_csv(TOP_500_BY_STATE_CSV, top_500_by_state)
+
+    # Backward-compat top-100-per-state
+    _write_json(TOP_100_BY_STATE_JSON, top_100_by_state)
+    _write_csv(TOP_100_BY_STATE_CSV, top_100_by_state)
+
+    # --- Final verification ---
+    print("\n[COUNTS]")
+    print(f"  top_1000_buildings:  {len(top_1000):,}")
+    print(f"  top_500_buildings:   {len(top_500):,} (compat)")
+    print(f"  top_500_by_state:    {len(top_500_by_state):,}")
+    print(f"  top_100_by_state:    {len(top_100_by_state):,} (compat)")
 
     print("\n[DONE] Processed outputs built.")
 

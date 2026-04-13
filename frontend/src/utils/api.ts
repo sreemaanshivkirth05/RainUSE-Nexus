@@ -94,6 +94,8 @@ export interface HealthResponse {
 export interface BuildingsParams {
   state?: string;
   limit?: number;
+  page_size?: number;
+  page?: number;
   min_score?: number;
   offset?: number;
 }
@@ -141,12 +143,12 @@ export const apiClient = {
   buildings: (params: BuildingsParams = {}): Promise<BuildingsResponse> =>
     get<BuildingsResponse>(`/buildings${toQueryString(params)}`),
 
-  topBuildings: (limit = 50): Promise<BuildingsResponse> =>
+  topBuildings: (limit = 1000): Promise<BuildingsResponse> =>
     get<BuildingsResponse>(`/buildings/top?limit=${limit}`),
 
-  topBuildingsByState: (state: string, limit = 25): Promise<BuildingsResponse> =>
+  topBuildingsByState: (state: string, limit = 500): Promise<BuildingsResponse> =>
     get<BuildingsResponse>(
-      `/buildings/top-by-state?state=${encodeURIComponent(state)}&limit=${limit}`
+      `/buildings/top?state=${encodeURIComponent(state)}&limit=${limit}`
     ),
 
   buildingDetail: (id: string): Promise<Building> =>

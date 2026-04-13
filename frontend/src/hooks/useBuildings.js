@@ -21,7 +21,7 @@ const MOCK = Array.isArray(mockBuildingsData)
  * @param {{ state?: string, limit?: number, minScore?: number }} [opts]
  * @returns {{ buildings: any[], loading: boolean, error: string|null }}
  */
-export function useBuildings({ state = '', limit = 500, minScore } = {}) {
+export function useBuildings({ state = '', limit = 1000, minScore } = {}) {
   const [buildings, setBuildings] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
@@ -69,7 +69,7 @@ export function useBuildings({ state = '', limit = 500, minScore } = {}) {
  * @param {number} [limit=50]
  * @returns {{ buildings: any[], loading: boolean, error: string|null }}
  */
-export function useTopBuildings(limit = 50) {
+export function useTopBuildings(limit = 1000) {
   const [buildings, setBuildings] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
@@ -109,7 +109,7 @@ export function useTopBuildings(limit = 50) {
  * @param {number} [limit=25]
  * @returns {{ buildings: any[], loading: boolean, error: string|null }}
  */
-export function useTopBuildingsByState(state, limit = 25) {
+export function useTopBuildingsByState(state, limit = 500) {
   const [buildings, setBuildings] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);

@@ -8,7 +8,7 @@ export default function MapView() {
   const [selectedState, setSelectedState] = useState('');
   const [minScore, setMinScore] = useState(0);
   const [maxScore, setMaxScore] = useState(100);
-  const { buildings, loading, error } = useBuildings({ limit: 500 });
+  const { buildings, loading, error } = useBuildings({ limit: 1000 });
 
   // Unique sorted states from loaded data
   const states = useMemo(() => {

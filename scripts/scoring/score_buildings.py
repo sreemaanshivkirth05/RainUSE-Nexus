@@ -13,17 +13,23 @@ INPUT_FILE = PROCESSED_DIR / "buildings_stage2b.csv"
 SCORED_CSV = PROCESSED_DIR / "buildings_scored.csv"
 SCORED_JSON = PROCESSED_DIR / "buildings_scored.json"
 
-TOP_500_CSV = PROCESSED_DIR / "top_500_buildings.csv"
-TOP_500_JSON = PROCESSED_DIR / "top_500_buildings.json"
+# New primary outputs (1 000 global / 500 per-state)
+TOP_1000_CSV         = PROCESSED_DIR / "top_1000_buildings.csv"
+TOP_1000_JSON        = PROCESSED_DIR / "top_1000_buildings.json"
+TOP_500_BY_STATE_CSV = PROCESSED_DIR / "top_500_by_state.csv"
+TOP_500_BY_STATE_JSON= PROCESSED_DIR / "top_500_by_state.json"
 
-TOP_100_BY_STATE_CSV = PROCESSED_DIR / "top_100_by_state.csv"
+# Kept for backward compatibility — nothing that depends on them will break
+TOP_500_CSV           = PROCESSED_DIR / "top_500_buildings.csv"
+TOP_500_JSON          = PROCESSED_DIR / "top_500_buildings.json"
+TOP_100_BY_STATE_CSV  = PROCESSED_DIR / "top_100_by_state.csv"
 TOP_100_BY_STATE_JSON = PROCESSED_DIR / "top_100_by_state.json"
 
 SUMMARY_JSON = PROCESSED_DIR / "summary.json"
 
 
-GLOBAL_TOP_N = 500
-STATE_TOP_N = 100
+GLOBAL_TOP_N = 1000   # was 500
+STATE_TOP_N  = 500    # was 100
 
 
 def log(msg: str) -> None:
@@ -220,6 +226,8 @@ def build_summary(df: pd.DataFrame, global_top: pd.DataFrame, state_top: pd.Data
             ["global_rank", "id", "state", "final_viability_score", "opportunity_type"]
         ].head(5).to_dict(orient="records"),
         "top_3_states_by_avg_score": state_summary.head(3).to_dict(orient="records"),
+        "top_by_state_counts": state_top.groupby("state")["id"].count().sort_index().to_dict(),
+        # kept for backward compat
         "top_100_by_state_counts": state_top.groupby("state")["id"].count().sort_index().to_dict(),
         "state_summary": state_summary.to_dict(orient="records"),
     }
@@ -241,26 +249,48 @@ def main() -> None:
     log(f"Wrote {SCORED_JSON}")
 
     global_top = df.head(GLOBAL_TOP_N).copy()
-    global_top.to_csv(TOP_500_CSV, index=False)
-    log(f"Wrote {TOP_500_CSV} ({len(global_top):,} rows)")
 
-    global_top.to_json(TOP_500_JSON, orient="records", indent=2)
+    # Primary output: top 1 000
+    global_top.to_csv(TOP_1000_CSV, index=False)
+    log(f"Wrote {TOP_1000_CSV} ({len(global_top):,} rows)")
+    global_top.to_json(TOP_1000_JSON, orient="records", indent=2)
+    log(f"Wrote {TOP_1000_JSON}")
+
+    # Backward-compat: top 500 (subset of top 1 000)
+    top500 = df.head(500).copy()
+    top500.to_csv(TOP_500_CSV, index=False)
+    log(f"Wrote {TOP_500_CSV} (500 rows — backward compat)")
+    top500.to_json(TOP_500_JSON, orient="records", indent=2)
     log(f"Wrote {TOP_500_JSON}")
 
+    _state_sorted = df.sort_values(
+        ["state", "final_viability_score", "annual_capture_gallons", "roof_area_sqft"],
+        ascending=[True, False, False, False]
+    )
+
     state_top = (
-        df.sort_values(
-            ["state", "final_viability_score", "annual_capture_gallons", "roof_area_sqft"],
-            ascending=[True, False, False, False]
-        )
+        _state_sorted
         .groupby("state", group_keys=False)
         .head(STATE_TOP_N)
         .copy()
     )
 
-    state_top.to_csv(TOP_100_BY_STATE_CSV, index=False)
-    log(f"Wrote {TOP_100_BY_STATE_CSV} ({len(state_top):,} rows)")
+    # Primary: top 500 per state
+    state_top.to_csv(TOP_500_BY_STATE_CSV, index=False)
+    log(f"Wrote {TOP_500_BY_STATE_CSV} ({len(state_top):,} rows)")
+    state_top.to_json(TOP_500_BY_STATE_JSON, orient="records", indent=2)
+    log(f"Wrote {TOP_500_BY_STATE_JSON}")
 
-    state_top.to_json(TOP_100_BY_STATE_JSON, orient="records", indent=2)
+    # Backward-compat: top 100 per state
+    old_state_top = (
+        _state_sorted
+        .groupby("state", group_keys=False)
+        .head(100)
+        .copy()
+    )
+    old_state_top.to_csv(TOP_100_BY_STATE_CSV, index=False)
+    log(f"Wrote {TOP_100_BY_STATE_CSV} (100/state — backward compat)")
+    old_state_top.to_json(TOP_100_BY_STATE_JSON, orient="records", indent=2)
     log(f"Wrote {TOP_100_BY_STATE_JSON}")
 
     summary = build_summary(df, global_top, state_top)
