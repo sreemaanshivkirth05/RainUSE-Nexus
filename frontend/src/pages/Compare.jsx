@@ -1,16 +1,44 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import PageWrapper from '../components/layout/PageWrapper';
-import mockBuildings from '../data/mockBuildings.json';
 import { getScoreColor } from '../utils/formatters';
 import CountUp from '../components/CountUp';
+import LoadingState from '../components/shared/LoadingState';
+import { useTopBuildings } from '../hooks/useBuildings';
 
 export default function Compare() {
   const [analyzed, setAnalyzed] = useState(false);
-  
-  // Hardcoded best candidates for prototype wow moment
-  const bldg1 = mockBuildings.find(b => b.id === 'tx-dfw-015') || mockBuildings[0]; 
-  const bldg2 = mockBuildings.find(b => b.id === 'fl-mia-032') || mockBuildings[1];
+  const { buildings, loading, error } = useTopBuildings(2);
+
+  const [bldg1, bldg2] = buildings;
+
+  if (loading) {
+    return (
+      <PageWrapper className="max-w-7xl mx-auto pb-20">
+        <LoadingState rows={4} />
+      </PageWrapper>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageWrapper className="max-w-7xl mx-auto pb-20">
+        <div className="text-center py-12 bg-zinc-900/30 rounded border border-red-500/20 text-red-300">
+          {error}
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  if (!bldg1 || !bldg2) {
+    return (
+      <PageWrapper className="max-w-7xl mx-auto pb-20">
+        <div className="text-center py-12 bg-zinc-900/30 rounded border border-white/5 text-zinc-300">
+          Not enough building data is available to run a comparison.
+        </div>
+      </PageWrapper>
+    );
+  }
   
   const winnerId = bldg1.final_viability_score > bldg2.final_viability_score ? bldg1.id : bldg2.id;
 

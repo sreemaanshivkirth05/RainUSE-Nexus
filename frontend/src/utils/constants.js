@@ -2,13 +2,6 @@
  * RainUSE Nexus — Constants
  */
 
-// API base URL — switch to real backend when ready
-// TODO (Person 3): Toggle this to use live API
-export const API_BASE_URL = 'http://localhost:8000';
-
-// Use mock data by default (set to false when backend is running)
-export const USE_MOCK_DATA = true;
-
 // Feature groups for score breakdown display
 export const FEATURE_GROUPS = [
   {
@@ -79,6 +72,7 @@ export const FEATURE_GROUPS = [
 export const NAV_ITEMS = [
   { path: '/', label: 'Explorer', icon: '🗺️' },
   { path: '/buildings', label: 'Prospects', icon: '🏢' },
+  { path: '/map', label: 'Map View', icon: '📍' },
   { path: '/compare', label: 'Compare', icon: '⚖️' },
   { path: '/methodology', label: 'Methodology', icon: '📐' }
 ];

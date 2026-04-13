@@ -1,8 +1,10 @@
 import { Link, useLocation } from 'react-router-dom';
 import { NAV_ITEMS } from '../../utils/constants';
+import { useApiHealth } from '../../hooks/useApiHealth';
 
 export default function Header() {
   const location = useLocation();
+  const { isLive, checked } = useApiHealth();
 
   return (
     <header className="h-16 flex-shrink-0 border-b border-white/5 bg-[#09090b]/80 backdrop-blur-xl flex items-center justify-between px-8 text-zinc-300 sticky top-0 z-50">
@@ -42,8 +44,32 @@ export default function Header() {
       </div>
 
       {/* Right section */}
-      <div className="flex items-center gap-4">
-        {/* Status badge */}
+      <div className="flex items-center gap-3">
+        {/* Data mode indicator */}
+        {checked && (
+          <div
+            className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-mono font-medium transition-all ${
+              isLive
+                ? 'bg-emerald-950/60 border-emerald-500/30 text-emerald-400'
+                : 'bg-zinc-900/60 border-white/[0.06] text-zinc-500'
+            }`}
+            title={isLive ? 'Connected to live FastAPI backend' : 'Backend unavailable — displaying demo data'}
+          >
+            <span className="relative flex h-1.5 w-1.5">
+              {isLive ? (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                </>
+              ) : (
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-zinc-600" />
+              )}
+            </span>
+            {isLive ? 'LIVE DATA' : 'DEMO MODE'}
+          </div>
+        )}
+
+        {/* Existing system status badge */}
         <div className="hidden lg:flex items-center gap-3 px-4 py-1.5 rounded-full bg-zinc-900 border border-white/[0.04] text-xs font-medium">
           <span className="text-zinc-500">22 States Supported</span>
           <span className="text-zinc-800">|</span>

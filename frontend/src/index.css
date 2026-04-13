@@ -93,6 +93,43 @@ body {
   @apply fixed inset-0 bg-black/80 backdrop-blur-sm z-40 transition-opacity duration-300;
 }
 
+/* ── Leaflet dark-theme overrides ─────────────────────────── */
+
+/* Popup bubble */
+.leaflet-popup-content-wrapper {
+  background: #09090b !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.7) !important;
+  padding: 0 !important;
+  color: #f4f4f5 !important;
+}
+.leaflet-popup-content {
+  margin: 14px 16px !important;
+}
+/* Remove the white arrow/tip */
+.leaflet-popup-tip-container {
+  display: none !important;
+}
+/* Close button */
+.leaflet-popup-close-button {
+  color: #71717a !important;
+  top: 6px !important;
+  right: 8px !important;
+}
+.leaflet-popup-close-button:hover {
+  color: #f4f4f5 !important;
+}
+/* Attribution text */
+.leaflet-control-attribution {
+  background: rgba(9,9,11,0.75) !important;
+  color: #3f3f46 !important;
+  font-size: 9px !important;
+}
+.leaflet-control-attribution a {
+  color: #52525b !important;
+}
+
 /* Pulse dot for live indicator */
 .pulse-dot {
   @apply relative;
