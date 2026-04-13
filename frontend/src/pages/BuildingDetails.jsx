@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MapPin, FileText, Activity, Layers, Repeat, Eye, HardHat, Droplets } from 'lucide-react';
@@ -9,6 +10,8 @@ import ROIPanel from '../components/buildings/ROIPanel';
 import CountUp from '../components/CountUp';
 import LoadingState from '../components/shared/LoadingState';
 import { useBuildingDetail } from '../hooks/useBuildings';
+
+const SatelliteView = lazy(() => import('../components/buildings/SatelliteView'));
 
 export default function BuildingDetails() {
   const { id } = useParams();
@@ -128,6 +131,14 @@ export default function BuildingDetails() {
           Compare Asset
         </button>
       </header>
+
+      <Suspense
+        fallback={
+          <div className="rounded border border-white/5 bg-zinc-900/30 animate-pulse" style={{ height: 310 }} />
+        }
+      >
+        <SatelliteView building={building} />
+      </Suspense>
 
       <section className="p-6 md:p-8 rounded bg-zinc-900/30 border border-white/5 border-l-2 border-l-emerald-500">
         <h3 className="text-lg font-medium text-zinc-100 mb-3 flex items-center gap-2">
