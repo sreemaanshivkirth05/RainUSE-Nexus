@@ -1,58 +1,28 @@
-import { memo } from "react";
-import { ComposableMap, Geographies, Geography } from "react-simple-maps";
-import { useNavigate } from "react-router-dom";
-import { TARGET_STATES } from "../utils/constants";
+import { useNavigate } from 'react-router-dom';
+import { TARGET_STATES } from '../utils/constants';
 
-const geoUrl = "https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json";
+function slugifyState(name) {
+  return encodeURIComponent(name.replace(/\s+/g, '-'));
+}
 
-const USAMap = () => {
+export default function USAMap() {
   const navigate = useNavigate();
 
   return (
-    <div className="w-full max-w-4xl mx-auto h-[400px] sm:h-[500px]">
-      <ComposableMap projection="geoAlbersUsa" style={{ width: "100%", height: "100%" }}>
-        <Geographies geography={geoUrl}>
-          {({ geographies }) =>
-            geographies.map((geo) => {
-              const stateName = geo.properties.name;
-              const isSupported = TARGET_STATES.includes(stateName);
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      {TARGET_STATES.map((state) => {
+        const stateName = typeof state === 'string' ? state : state.name;
 
-              return (
-                <Geography
-                  key={geo.rsmKey}
-                  geography={geo}
-                  onClick={() => {
-                    if (isSupported) {
-                      navigate(`/state/${stateName.toLowerCase()}`);
-                    }
-                  }}
-                  style={{
-                    default: {
-                      fill: isSupported ? "rgba(16, 185, 129, 0.2)" : "rgba(31, 41, 55, 0.5)", // emerald-500/20 or gray-800/50
-                      outline: "none",
-                      stroke: "rgba(75, 85, 99, 0.4)", // border-gray-600/40
-                      strokeWidth: 0.75,
-                    },
-                    hover: {
-                      fill: isSupported ? "rgba(16, 185, 129, 0.6)" : "rgba(31, 41, 55, 0.5)",
-                      outline: "none",
-                      cursor: isSupported ? "pointer" : "default",
-                      stroke: isSupported ? "rgba(16, 185, 129, 1)" : "rgba(75, 85, 99, 0.4)",
-                      strokeWidth: isSupported ? 1.5 : 0.75,
-                    },
-                    pressed: {
-                      fill: isSupported ? "rgba(16, 185, 129, 0.8)" : "rgba(31, 41, 55, 0.5)",
-                      outline: "none",
-                    },
-                  }}
-                />
-              );
-            })
-          }
-        </Geographies>
-      </ComposableMap>
+        return (
+          <button
+            key={stateName}
+            onClick={() => navigate(`/state/${slugifyState(stateName)}`)}
+            className="rounded-xl border border-white/10 bg-zinc-900/40 px-4 py-3 text-sm text-zinc-200 hover:bg-zinc-800/60 hover:border-white/20 transition-all text-left"
+          >
+            {stateName}
+          </button>
+        );
+      })}
     </div>
   );
-};
-
-export default memo(USAMap);
+}

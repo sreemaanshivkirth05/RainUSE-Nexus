@@ -9,6 +9,8 @@ from app.services.data_service import (
     get_buildings,
     get_building_by_id,
     get_buildings_by_state,
+    get_top_buildings,
+    get_top_buildings_by_state,
 )
 
 router = APIRouter(prefix="/buildings", tags=["buildings"])
@@ -52,6 +54,33 @@ def list_buildings(
     if limit is not None:
         buildings = buildings[:limit]
 
+    return {
+        "count": len(buildings),
+        "buildings": buildings,
+    }
+
+
+@router.get("/top")
+def list_top_buildings(limit: int = Query(50, ge=1, le=500)):
+    """
+    Return the highest-scoring building shortlist used by the frontend explorer.
+    """
+    buildings = get_top_buildings(limit)
+    return {
+        "count": len(buildings),
+        "buildings": buildings,
+    }
+
+
+@router.get("/top-by-state")
+def list_top_buildings_by_state(
+    state: str = Query(..., description="State name"),
+    limit: int = Query(25, ge=1, le=100),
+):
+    """
+    Return the highest-scoring buildings for a single state.
+    """
+    buildings = get_top_buildings_by_state(state, limit)
     return {
         "count": len(buildings),
         "buildings": buildings,
