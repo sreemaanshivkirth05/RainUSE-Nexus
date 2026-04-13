@@ -21,6 +21,8 @@ interface Building {
   roof_area_sqft?: number | string | null;
   cooling_confidence?: number | string | null;
   name?: string;
+  building_name?: string;
+  short_address?: string;
   city?: string;
   state?: string;
   [key: string]: unknown;
@@ -39,12 +41,17 @@ export default function SatelliteView({ building }: Props) {
   const coolConf = Number(building.cooling_confidence || 0);
   const coolPct = Math.round(coolConf * 100);
 
-  const locationLabel =
-    building.city && building.state
-      ? `${building.city}, ${building.state}`
-      : hasCoords
-      ? `${lat!.toFixed(4)}, ${lng!.toFixed(4)}`
-      : 'Unknown location';
+  const displayName = building.building_name || building.name || '';
+  const locationLabel = (() => {
+    if (building.short_address) {
+      return displayName ? `${displayName} — ${building.short_address}` : building.short_address;
+    }
+    if (building.city && building.state) {
+      return displayName ? `${displayName} — ${building.city}, ${building.state}` : `${building.city}, ${building.state}`;
+    }
+    if (hasCoords) return `${lat!.toFixed(4)}, ${lng!.toFixed(4)}`;
+    return 'Unknown location';
+  })();
 
   /* ── Badge colour helpers ─────────────────────────────────────────── */
   const roofBadge =

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, FileSearch } from 'lucide-react';
+import { Building2, FileSearch, Search, X } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import BuildingFilters from '../components/buildings/BuildingFilters';
 import CountUp from '../components/CountUp';
@@ -18,6 +18,8 @@ export default function TopBuildings() {
   const { states,    loading: statesLoading }           = useStates();
   const loading = buildingsLoading || statesLoading;
 
+  const [search, setSearch] = useState('');
+
   const [filters, setFilters] = useState({
     state: '',
     opportunityType: '',
@@ -33,6 +35,7 @@ export default function TopBuildings() {
 
 
   const filteredBuildings = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return buildings
       .filter((b) => {
         if (filters.state && b.state !== filters.state) return false;
@@ -45,20 +48,55 @@ export default function TopBuildings() {
         if (filters.requireCooling && Number(b.cooling_tower_score) < 0.7) return false;
         if (filters.highWaterCost && Number(b.water_cost_score) < 0.7) return false;
         if (filters.strongGeometry && Number(b.roof_geometry_quality_score) < 0.6) return false;
+        if (q) {
+          const haystack = [
+            b.building_name,
+            b.name,
+            b.short_address,
+            b.city,
+            b.state,
+          ].filter(Boolean).join(' ').toLowerCase();
+          if (!haystack.includes(q)) return false;
+        }
         return true;
       })
       .sort((a, b) => Number(b.final_viability_score) - Number(a.final_viability_score));
-  }, [buildings, filters]);
+  }, [buildings, filters, search]);
 
   return (
     <PageWrapper className="max-w-[1600px] mx-auto pb-12">
       <div className="mb-8 border-b border-white/5 pb-6">
-        <h1 className="font-display text-4xl font-medium text-white flex items-center gap-3">
-          <Building2 className="w-8 h-8 text-emerald-500" /> Building Explorer
-        </h1>
-        <p className="text-zinc-500 mt-2 text-lg">
-          Filtering {filteredBuildings.length} target prospects across {filters.state || 'all active regions'}.
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div>
+            <h1 className="font-display text-4xl font-medium text-white flex items-center gap-3">
+              <Building2 className="w-8 h-8 text-emerald-500" /> Building Explorer
+            </h1>
+            <p className="text-zinc-500 mt-2 text-lg">
+              Filtering {filteredBuildings.length} target prospects across {filters.state || 'all active regions'}.
+            </p>
+          </div>
+
+          {/* Search bar */}
+          <div className="relative flex-shrink-0 w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, address, city…"
+              className="w-full pl-9 pr-8 py-2.5 bg-zinc-900 border border-white/10 rounded text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-500/50 transition-colors"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+                aria-label="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
@@ -91,18 +129,23 @@ export default function TopBuildings() {
                   >
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex items-center gap-3 mb-1">
                           <h3 className="font-display font-medium text-xl text-zinc-100 truncate group-hover:text-emerald-400 transition-colors">
-                            {bldg.name || bldg.id}
+                            {bldg.building_name || bldg.name || bldg.id}
                           </h3>
                           <OpportunityBadge type={bldg.opportunity_type} />
                         </div>
 
+                        {bldg.short_address ? (
+                          <p className="text-xs text-zinc-500 mb-1 truncate">{bldg.short_address}</p>
+                        ) : (
+                          <p className="text-xs text-zinc-600 mb-1">
+                            {[bldg.city, bldg.state].filter(Boolean).join(', ') || bldg.state}
+                          </p>
+                        )}
+
                         <div className="text-sm text-zinc-500 mb-4">
-                          {[bldg.city, bldg.state].filter(Boolean).join(', ') || bldg.state}
-                          {' • '}
-                          {(bldg.explanation || '').substring(0, 110)}
-                          ...
+                          {(bldg.explanation || '').substring(0, 110)}…
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">

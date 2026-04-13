@@ -51,8 +51,13 @@ export default function BuildingDetails() {
     );
   }
 
-  const buildingName = building.name || building.id;
+  const buildingName = building.building_name || building.name || building.id;
   const cityState = [building.city, building.state].filter(Boolean).join(', ') || building.state || 'Unknown';
+  const fullLocation = [
+    building.city && building.city !== 'Unknown City' ? building.city : null,
+    building.state,
+    building.zip_code || null,
+  ].filter(Boolean).join(', ');
 
   return (
     <PageWrapper className="max-w-7xl mx-auto space-y-8 pb-12">
@@ -91,13 +96,17 @@ export default function BuildingDetails() {
             )}
           </div>
 
-          <h1 className="font-display text-4xl font-medium text-white mb-2">
+          <h1 className="font-display text-4xl font-medium text-white mb-1">
             {buildingName}
           </h1>
 
-          <p className="text-zinc-500 text-lg flex items-center gap-2">
-            <MapPin className="w-4 h-4" />
-            {cityState}
+          {building.short_address && (
+            <p className="text-zinc-400 text-base mb-1">{building.short_address}</p>
+          )}
+
+          <p className="text-zinc-500 text-sm flex items-center gap-2">
+            <MapPin className="w-3.5 h-3.5" />
+            {fullLocation || cityState}
             {building.latitude && building.longitude && (
               <span className="text-zinc-600 text-xs font-mono ml-2 block sm:inline">
                 [{Number(building.latitude).toFixed(4)}, {Number(building.longitude).toFixed(4)}]

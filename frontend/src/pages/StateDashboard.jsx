@@ -150,17 +150,27 @@ export default function StateDashboard() {
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
+                  <div className="flex items-center gap-3 mb-1">
                     <h3 className="font-display font-medium text-xl text-zinc-100 truncate group-hover:text-emerald-400 transition-colors">
-                      {bldg.name || bldg.id}
+                      {bldg.building_name || bldg.name || bldg.id}
                     </h3>
                     <OpportunityBadge type={bldg.opportunity_type} />
                   </div>
 
+                  {/* City badge + address */}
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    {bldg.city && bldg.city !== 'Unknown City' && (
+                      <span className="px-2 py-0.5 bg-zinc-800 border border-white/5 rounded text-xs text-zinc-400">
+                        {bldg.city}, {bldg.state}
+                      </span>
+                    )}
+                    {bldg.short_address && (
+                      <span className="text-xs text-zinc-600 truncate">{bldg.short_address}</span>
+                    )}
+                  </div>
+
                   <div className="text-sm text-zinc-500 mb-4">
-                    {[bldg.city, bldg.state].filter(Boolean).join(', ') || bldg.state}
-                    {' • '}
-                    {(bldg.explanation || '').substring(0, 110)}...
+                    {(bldg.explanation || '').substring(0, 110)}…
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">

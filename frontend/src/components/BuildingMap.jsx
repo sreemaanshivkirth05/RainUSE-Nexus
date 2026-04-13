@@ -31,7 +31,7 @@ function pinRadius(score) {
 function buildPopupHTML(b) {
   const score     = Number(b.final_viability_score || 0);
   const scoreColor = score >= 70 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
-  const name      = b.name || b.id || 'Unknown';
+  const name      = b.building_name || b.name || b.id || 'Unknown';
   const cityState = [b.city, b.state].filter(Boolean).join(', ');
   const oppType   = b.opportunity_type || 'Balanced Opportunity';
   const roof      = formatSqft(b.roof_area_sqft);
@@ -64,7 +64,7 @@ function buildPopupHTML(b) {
         </div>
         <div style="flex:1;min-width:0">
           <div style="font-weight:600;font-size:13px;color:#f4f4f5;line-height:1.3;margin-bottom:2px">${name}</div>
-          <div style="font-size:11px;color:#71717a">${cityState}</div>
+          <div style="font-size:11px;color:#71717a">${b.short_address || cityState}</div>
         </div>
       </div>
       <div style="display:inline-block;font-size:10px;padding:2px 8px;border-radius:999px;

@@ -24,6 +24,11 @@ class BuildingRecord(BaseModel):
     latitude: float
     longitude: float
 
+    # --- Enriched address fields (populated by reverse geocoding) ---
+    building_name: Optional[str] = ""
+    short_address: Optional[str] = ""
+    zip_code: Optional[str] = ""
+
     # --- Physical Catchment Features ---
     roof_area_sqft: float
     roof_over_100k: bool

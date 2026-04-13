@@ -19,8 +19,25 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed"
-BUILDINGS_PATH     = PROCESSED_DATA_DIR / "buildings_scored.json"
 SUMMARY_PATH       = PROCESSED_DATA_DIR / "summary.json"
+
+
+def _find_buildings_source() -> Path:
+    """Prefer geocoded data, then scored, then top_1000 fallback."""
+    for candidate in (
+        PROCESSED_DATA_DIR / "buildings_geocoded.json",
+        PROCESSED_DATA_DIR / "buildings_scored.json",
+        PROCESSED_DATA_DIR / "top_1000_buildings.json",
+    ):
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError(
+        "No source buildings JSON found. Run reverse_geocode_buildings.py or "
+        "ensure top_1000_buildings.json exists."
+    )
+
+
+BUILDINGS_PATH = _find_buildings_source()
 
 # New primary outputs
 TOP_1000_JSON         = PROCESSED_DATA_DIR / "top_1000_buildings.json"
