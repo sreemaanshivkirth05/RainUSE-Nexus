@@ -114,30 +114,38 @@ export default function TopBuildings() {
                             HARVEST: {formatGallons(bldg.annual_capture_gallons)}
                           </span>
 
-                          {/* >100K sqft roof badge */}
-                          {bldg.roof_over_100k && (
-                            <span className="px-2.5 py-1.5 bg-amber-950/50 border border-amber-500/30 rounded text-xs font-bold text-amber-400 font-mono tracking-wide">
-                              100K+ ROOF
-                            </span>
-                          )}
+                          {/* Roof flag: ✅ if >100K sqft, ❌ otherwise */}
+                          <span
+                            className="px-2.5 py-1.5 bg-zinc-900 border border-white/5 rounded text-xs font-bold font-mono"
+                            title={bldg.roof_over_100k ? 'Roof area exceeds 100,000 sq ft' : 'Roof area below 100,000 sq ft'}
+                          >
+                            {bldg.roof_over_100k
+                              ? <span className="text-amber-400">✅ 100K+ ROOF</span>
+                              : <span className="text-zinc-600">❌ &lt;100K ROOF</span>
+                            }
+                          </span>
 
-                          {/* AI Cooling-Tower Confidence badge */}
-                          {bldg.cooling_confidence != null && (
-                            <span
-                              className={`px-2.5 py-1.5 rounded text-xs font-semibold font-mono flex items-center gap-1.5 ${
-                                Number(bldg.cooling_confidence) >= 0.7
-                                  ? 'bg-cyan-950/60 border border-cyan-500/30 text-cyan-300'
-                                  : Number(bldg.cooling_confidence) >= 0.4
-                                  ? 'bg-amber-950/50 border border-amber-500/20 text-amber-400'
-                                  : 'bg-zinc-800/50 border border-white/[0.04] text-zinc-500'
-                              }`}
-                            >
-                              <svg className="w-3 h-3 flex-shrink-0" viewBox="0 0 16 16" fill="currentColor">
-                                <path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1zm0 1.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11zm.75 2.5v3.19l2.28 2.28-1.06 1.06L7.25 8.81V5h1.5z"/>
-                              </svg>
-                              AI: {Math.round(Number(bldg.cooling_confidence) * 100)}% Cooling
-                            </span>
-                          )}
+                          {/* AI Cooling-Tower Confidence — progress bar + tooltip */}
+                          {bldg.cooling_confidence != null && (() => {
+                            const pct = Math.round(Number(bldg.cooling_confidence) * 100);
+                            const isGreen  = pct >= 80;
+                            const isYellow = pct >= 60;
+                            const barColor = isGreen ? 'bg-cyan-500' : isYellow ? 'bg-amber-500' : 'bg-red-500';
+                            const textColor = isGreen ? 'text-cyan-300' : isYellow ? 'text-amber-400' : 'text-red-400';
+                            const borderColor = isGreen ? 'border-cyan-500/30' : isYellow ? 'border-amber-500/20' : 'border-red-500/20';
+                            const bgColor = isGreen ? 'bg-cyan-950/60' : isYellow ? 'bg-amber-950/50' : 'bg-red-950/40';
+                            return (
+                              <span
+                                className={`px-2.5 py-1.5 rounded text-xs font-semibold font-mono border ${bgColor} ${borderColor} ${textColor} flex items-center gap-2`}
+                                title={bldg.visual_notes || `AI cooling confidence: ${pct}%`}
+                              >
+                                <span className="whitespace-nowrap">AI: {pct}%</span>
+                                <span className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden flex-shrink-0">
+                                  <span className={`block h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+                                </span>
+                              </span>
+                            );
+                          })()}
 
                           {Number(bldg.water_cost_score) > 0.7 && (
                             <span className="px-2.5 py-1.5 bg-zinc-800/50 border border-white/[0.04] rounded text-xs font-medium text-emerald-400">
@@ -157,7 +165,11 @@ export default function TopBuildings() {
                         <div className="text-[10px] text-zinc-600 uppercase tracking-widest font-mono hidden md:block">
                           Score
                         </div>
-                        <div className="text-4xl font-display font-medium text-zinc-100">
+                        <div className={`text-4xl font-display font-medium ${
+                          Number(bldg.final_viability_score) >= 70 ? 'text-emerald-400'
+                          : Number(bldg.final_viability_score) >= 50 ? 'text-amber-400'
+                          : 'text-red-400'
+                        }`}>
                           <CountUp to={Number(bldg.final_viability_score)} duration={1.5} />
                         </div>
                         <div className="text-xs text-emerald-500 font-medium md:mt-2 opacity-0 group-hover:opacity-100 transition-opacity">

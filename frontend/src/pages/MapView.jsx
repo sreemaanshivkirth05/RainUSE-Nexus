@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { MapPin, ChevronDown, Building2, Droplets, Activity } from 'lucide-react';
+import { MapPin, ChevronDown, Building2, Droplets, Activity, SlidersHorizontal } from 'lucide-react';
 import BuildingMap from '../components/BuildingMap';
 import { useBuildings } from '../hooks/useBuildings';
 import { formatGallons } from '../utils/formatters';
 
 export default function MapView() {
   const [selectedState, setSelectedState] = useState('');
+  const [minScore, setMinScore] = useState(0);
+  const [maxScore, setMaxScore] = useState(100);
   const { buildings, loading, error } = useBuildings({ limit: 500 });
 
   // Unique sorted states from loaded data
@@ -14,19 +16,24 @@ export default function MapView() {
     return [...set].sort();
   }, [buildings]);
 
-  // Stats for the selected view
-  const visible = selectedState
-    ? buildings.filter((b) => b.state?.toLowerCase() === selectedState.toLowerCase())
-    : buildings;
+  // Apply both state + score filters
+  const visible = useMemo(() => {
+    return buildings.filter((b) => {
+      const score = Number(b.final_viability_score || 0);
+      if (selectedState && b.state?.toLowerCase() !== selectedState.toLowerCase()) return false;
+      if (score < minScore || score > maxScore) return false;
+      return true;
+    });
+  }, [buildings, selectedState, minScore, maxScore]);
 
-  const statCount   = visible.length;
-  const highCount   = visible.filter((b) => Number(b.final_viability_score || 0) >= 70).length;
+  const statCount    = visible.length;
+  const highCount    = visible.filter((b) => Number(b.final_viability_score || 0) >= 70).length;
   const totalCapture = visible.reduce((s, b) => s + Number(b.annual_capture_gallons || 0), 0);
 
   return (
     <div className="flex flex-col gap-4 pb-4">
       {/* ── Toolbar ─────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-medium text-white tracking-tight flex items-center gap-2">
             <MapPin className="w-5 h-5 text-emerald-500" />
@@ -37,8 +44,9 @@ export default function MapView() {
           </p>
         </div>
 
-        {/* State filter */}
-        <div className="flex items-center gap-3">
+        {/* Filters row */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* State filter */}
           <div className="relative">
             <select
               value={selectedState}
@@ -53,9 +61,38 @@ export default function MapView() {
             <ChevronDown className="w-3.5 h-3.5 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
-          {selectedState && (
+          {/* Score range slider */}
+          <div className="flex items-center gap-2 bg-zinc-900 border border-white/10 rounded px-3 py-2">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-zinc-500 flex-shrink-0" />
+            <span className="text-xs text-zinc-500 font-mono whitespace-nowrap">Score</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={minScore}
+              onChange={(e) => setMinScore(Number(e.target.value))}
+              className="w-20 accent-emerald-500 cursor-pointer"
+              title={`Min score: ${minScore}`}
+            />
+            <span className="text-xs font-mono text-zinc-400 w-6 text-center">{minScore}</span>
+            <span className="text-xs text-zinc-600">–</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={maxScore}
+              onChange={(e) => setMaxScore(Number(e.target.value))}
+              className="w-20 accent-emerald-500 cursor-pointer"
+              title={`Max score: ${maxScore}`}
+            />
+            <span className="text-xs font-mono text-zinc-400 w-6 text-center">{maxScore}</span>
+          </div>
+
+          {(selectedState || minScore > 0 || maxScore < 100) && (
             <button
-              onClick={() => setSelectedState('')}
+              onClick={() => { setSelectedState(''); setMinScore(0); setMaxScore(100); }}
               className="px-3 py-2 text-xs text-zinc-400 hover:text-zinc-200 border border-white/5 hover:border-white/10 rounded transition-colors"
             >
               Reset
@@ -90,7 +127,7 @@ export default function MapView() {
       {/* ── Map area ────────────────────────────────────────────── */}
       <div
         className="rounded border border-white/5 overflow-hidden"
-        style={{ height: 'calc(100vh - 13rem)' }}
+        style={{ height: 'calc(100vh - 14rem)' }}
       >
         {loading && (
           <div className="h-full flex items-center justify-center bg-zinc-900/40">
@@ -108,7 +145,7 @@ export default function MapView() {
         )}
 
         {!loading && !error && (
-          <BuildingMap buildings={buildings} selectedState={selectedState} />
+          <BuildingMap buildings={visible} selectedState={selectedState} />
         )}
       </div>
     </div>

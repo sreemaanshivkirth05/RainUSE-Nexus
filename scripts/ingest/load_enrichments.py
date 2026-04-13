@@ -1,55 +1,178 @@
 """
 RainUSE Nexus — Enrichment Data Ingestion
+==========================================
+Assigns ESG scores, stormwater fees, and local incentive scores to buildings,
+then saves an enriched output to data/processed/buildings_enriched.csv.
 
-Loads enrichment data sources for cooling, resilience, and sustainability signals.
+Usage:
+    python scripts/ingest/load_enrichments.py
 
-DATA SOURCES:
-  - Google imagery / rooftop visual inspection → cooling_tower_score, cooling_confidence, visual_notes
-  - OpenStreetMap cooling tower tags → cooling_tower_score support
-  - FEMA risk data → flood_score
-  - Water stress / drought source → water_stress_score
-  - EPA ECHO / facility context → facility_score
-  - SBTi / ESG → esg_score
-  - LEED → leed_score
-  - ENERGY STAR → energy_star_score
-
-OWNER: Person 2
-
-TODO:
-  - [ ] Integrate Google Maps / Satellite imagery API for rooftop inspection
-  - [ ] Query OSM Overpass API for cooling tower tags
-  - [ ] Download and parse FEMA NRI flood risk data
-  - [ ] Integrate water stress index data (WRI Aqueduct or similar)
-  - [ ] Query EPA ECHO for facility permits near building locations
-  - [ ] Load SBTi company list and match to building owners
-  - [ ] Load USGBC LEED certified buildings list
-  - [ ] Load EPA ENERGY STAR certified buildings list
+DATA SOURCES (implemented as deterministic rule-based stubs):
+  - Building type / corporate context → esg_score
+  - Progressive state bonus → esg_score
+  - Improvement value → leed_score
+  - State stormwater fee schedule → local_incentive_score
 """
+
+from __future__ import annotations
 
 import json
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
+import pandas as pd
+
+PROJECT_ROOT   = Path(__file__).resolve().parent.parent.parent
+RAW_DATA_DIR   = PROJECT_ROOT / "data" / "raw"
+PROCESSED_DIR  = PROJECT_ROOT / "data" / "processed"
+
+# ---------------------------------------------------------------------------
+# ESG scoring constants
+# ---------------------------------------------------------------------------
+
+# Building types that indicate ESG-conscious ownership
+ESG_BUILDING_TYPES = {"office", "corporate", "headquarters", "campus"}
+
+# States with progressive water / sustainability policy
+PROGRESSIVE_STATES = {"CA", "NY", "WA", "OR", "CO", "MA", "VT", "MN"}
+
+# State abbreviation → full name map (for matching)
+STATE_ABBREV = {
+    "Alabama": "AL", "Alaska": "AK", "Arizona": "AZ", "Arkansas": "AR",
+    "California": "CA", "Colorado": "CO", "Connecticut": "CT", "Delaware": "DE",
+    "Florida": "FL", "Georgia": "GA", "Hawaii": "HI", "Idaho": "ID",
+    "Illinois": "IL", "Indiana": "IN", "Iowa": "IA", "Kansas": "KS",
+    "Kentucky": "KY", "Louisiana": "LA", "Maine": "ME", "Maryland": "MD",
+    "Massachusetts": "MA", "Michigan": "MI", "Minnesota": "MN", "Mississippi": "MS",
+    "Missouri": "MO", "Montana": "MT", "Nebraska": "NE", "Nevada": "NV",
+    "New Hampshire": "NH", "New Jersey": "NJ", "New Mexico": "NM", "New York": "NY",
+    "North Carolina": "NC", "North Dakota": "ND", "Ohio": "OH", "Oklahoma": "OK",
+    "Oregon": "OR", "Pennsylvania": "PA", "Rhode Island": "RI", "South Carolina": "SC",
+    "South Dakota": "SD", "Tennessee": "TN", "Texas": "TX", "Utah": "UT",
+    "Vermont": "VT", "Virginia": "VA", "Washington": "WA", "West Virginia": "WV",
+    "Wisconsin": "WI", "Wyoming": "WY",
+}
+
+# ---------------------------------------------------------------------------
+# Stormwater fee schedule ($/1000 gal) by state
+# ---------------------------------------------------------------------------
+
+STORMWATER_FEE: dict[str, float] = {
+    "TX": 0.15,
+    "CA": 0.28,
+    "FL": 0.12,
+    "NY": 0.31,
+    "GA": 0.11,
+    "NC": 0.13,
+    "VA": 0.14,
+    "MD": 0.16,
+    "IL": 0.13,
+    "WA": 0.22,
+    "OR": 0.20,
+    "CO": 0.18,
+    "AZ": 0.17,
+    "NM": 0.14,
+    "OK": 0.10,
+    "LA": 0.11,
+    "AL": 0.10,
+    "SC": 0.11,
+    "TN": 0.12,
+    "MS": 0.10,
+    "AR": 0.10,
+    "KY": 0.11,
+    "MO": 0.12,
+    "KS": 0.10,
+    "IN": 0.11,
+    "WV": 0.10,
+    "DE": 0.14,
+}
+
+_FEE_MIN = 0.10   # $/1000 gal — lowest rate
+_FEE_MAX = 0.35   # $/1000 gal — highest plausible rate
 
 
-# =============================================================================
-# COOLING TOWER DETECTION
-# =============================================================================
+# ---------------------------------------------------------------------------
+# Helper: state name → abbreviation
+# ---------------------------------------------------------------------------
+
+def _state_abbrev(state_name: str) -> str:
+    """Convert full state name to 2-letter abbreviation (e.g., 'Texas' → 'TX')."""
+    return STATE_ABBREV.get(str(state_name).strip().title(), "")
+
+
+# ---------------------------------------------------------------------------
+# ESG scoring
+# ---------------------------------------------------------------------------
+
+def compute_esg_score(row: pd.Series) -> float:
+    """
+    Assign an ESG score (0.0–1.0) based on building type and state policy.
+
+    Rules:
+    - Base score: 0.3
+    - If building_type is office/corporate: esg_score = 0.7
+    - If state is in progressive states list: esg_score += 0.1 (capped at 1.0)
+    """
+    # Infer building type from available fields
+    btype = str(row.get("building_type", "") or "").lower()
+    opp   = str(row.get("opportunity_type", "") or "").lower()
+    name  = str(row.get("name", "") or "").lower()
+    expl  = str(row.get("explanation", "") or "").lower()
+
+    is_corporate = any(
+        kw in btype or kw in name or kw in expl
+        for kw in ESG_BUILDING_TYPES
+    )
+
+    base = 0.7 if is_corporate else 0.3
+
+    state_abbrev = _state_abbrev(row.get("state", ""))
+    if state_abbrev in PROGRESSIVE_STATES:
+        base = min(base + 0.1, 1.0)
+
+    return round(base, 3)
+
+
+def compute_leed_score(row: pd.Series) -> float:
+    """
+    Assign a LEED score stub based on improvement value.
+
+    Rules:
+    - improvement_value > $1,000,000 → leed_score = 0.6
+    - Default: leed_score = 0.2
+    """
+    impr_value = float(row.get("improvement_value", 0) or 0)
+    return 0.6 if impr_value > 1_000_000 else 0.2
+
+
+# ---------------------------------------------------------------------------
+# Stormwater incentive scoring
+# ---------------------------------------------------------------------------
+
+def compute_stormwater_fee(state: str) -> float:
+    """Return stormwater fee in $/1000 gal for the given state."""
+    abbrev = _state_abbrev(state)
+    return STORMWATER_FEE.get(abbrev, 0.10)
+
+
+def compute_local_incentive_score(state: str) -> float:
+    """
+    Normalize stormwater fee to 0.0–1.0 incentive score.
+
+    Higher stormwater fees mean higher savings from rainwater substitution,
+    which translates to a higher local incentive score.
+
+    Formula: (fee - _FEE_MIN) / (_FEE_MAX - _FEE_MIN)
+    """
+    fee = compute_stormwater_fee(state)
+    score = (fee - _FEE_MIN) / (_FEE_MAX - _FEE_MIN)
+    return round(max(0.0, min(1.0, score)), 4)
+
+
+# ---------------------------------------------------------------------------
+# Legacy loaders (wrappers for backward-compat — return empty dicts)
+# ---------------------------------------------------------------------------
 
 def load_visual_inspection_results() -> dict:
-    """
-    Load visual inspection results from rooftop imagery analysis.
-
-    Expected file: data/raw/visual_inspections.json
-    Format: { "building_id": { "cooling_tower_score": 0-1, "cooling_confidence": 0-1, "visual_notes": "..." } }
-
-    TODO (Person 2):
-      - Set up Google Maps satellite imagery access
-      - Implement or use ML model for cooling tower detection
-      - Record confidence levels for each detection
-      - Add visual notes describing roof features
-    """
     filepath = RAW_DATA_DIR / "visual_inspections.json"
     if filepath.exists():
         with open(filepath, "r") as f:
@@ -59,202 +182,121 @@ def load_visual_inspection_results() -> dict:
 
 
 def load_osm_cooling_tags() -> dict:
-    """
-    Load OpenStreetMap cooling tower tags for building locations.
-
-    TODO (Person 2):
-      - Query OSM Overpass API for man_made=cooling_tower tags
-      - Match to building locations by proximity
-      - Use as supporting signal for cooling_tower_score
-    """
     print("[INFO] OSM cooling tower tag loading not yet implemented.")
     return {}
 
 
-# =============================================================================
-# RESILIENCE DATA
-# =============================================================================
-
 def load_fema_flood_risk() -> dict:
-    """
-    Load FEMA National Risk Index flood risk data.
-
-    Expected file: data/raw/fema_flood_risk.csv
-    Columns: county_fips, state, county, flood_risk_score
-
-    TODO (Person 2):
-      - Download from: https://hazards.fema.gov/nri/
-      - Parse flood risk scores by county
-      - Normalize to 0-1 scale
-    """
     filepath = RAW_DATA_DIR / "fema_flood_risk.csv"
-    if filepath.exists():
-        # TODO: Parse CSV
-        pass
-    print("[WARN] FEMA flood risk data not found. Using defaults.")
+    if not filepath.exists():
+        print("[WARN] FEMA flood risk data not found. Using defaults.")
     return {}
 
 
 def load_water_stress() -> dict:
-    """
-    Load water stress / drought index data.
-
-    Expected file: data/raw/water_stress.csv
-
-    TODO (Person 2):
-      - Source from WRI Aqueduct or USGS drought monitor
-      - Map to building locations
-      - Normalize to 0-1 scale
-    """
     filepath = RAW_DATA_DIR / "water_stress.csv"
-    if filepath.exists():
-        # TODO: Parse CSV
-        pass
-    print("[WARN] Water stress data not found. Using defaults.")
+    if not filepath.exists():
+        print("[WARN] Water stress data not found. Using defaults.")
     return {}
 
-
-# =============================================================================
-# FACILITY & INDUSTRIAL CONTEXT
-# =============================================================================
 
 def load_epa_echo_facilities() -> dict:
-    """
-    Load EPA ECHO facility data.
-
-    Expected file: data/raw/epa_echo_facilities.csv
-
-    TODO (Person 2):
-      - Query EPA ECHO API or download bulk data
-      - Match facilities to building locations
-      - Score based on industrial activity and permits
-    """
     filepath = RAW_DATA_DIR / "epa_echo_facilities.csv"
-    if filepath.exists():
-        # TODO: Parse CSV
-        pass
-    print("[WARN] EPA ECHO facility data not found. Using defaults.")
+    if not filepath.exists():
+        print("[WARN] EPA ECHO facility data not found. Using defaults.")
     return {}
 
 
-# =============================================================================
-# SUSTAINABILITY / ADOPTION SIGNALS
-# =============================================================================
-
 def load_sbti_esg_data() -> dict:
-    """
-    Load SBTi / ESG commitment data.
-
-    Expected file: data/raw/sbti_companies.csv
-
-    TODO (Person 2):
-      - Download SBTi company list
-      - Match building owners/operators to SBTi participants
-      - Score based on commitment level (committed, target set, validated)
-    """
     filepath = RAW_DATA_DIR / "sbti_companies.csv"
-    if filepath.exists():
-        # TODO: Parse CSV
-        pass
-    print("[WARN] SBTi/ESG data not found. Using defaults.")
+    if not filepath.exists():
+        print("[WARN] SBTi/ESG data not found. Using defaults.")
     return {}
 
 
 def load_leed_certifications() -> dict:
-    """
-    Load LEED certified building data.
-
-    Expected file: data/raw/leed_certified.csv
-
-    TODO (Person 2):
-      - Download from USGBC or public LEED project directory
-      - Match to building locations
-      - Score based on certification level (Certified, Silver, Gold, Platinum)
-    """
     filepath = RAW_DATA_DIR / "leed_certified.csv"
-    if filepath.exists():
-        # TODO: Parse CSV
-        pass
-    print("[WARN] LEED certification data not found. Using defaults.")
+    if not filepath.exists():
+        print("[WARN] LEED certification data not found. Using defaults.")
     return {}
 
 
 def load_energy_star_certifications() -> dict:
-    """
-    Load ENERGY STAR certified building data.
-
-    Expected file: data/raw/energy_star.csv
-
-    TODO (Person 2):
-      - Download from EPA ENERGY STAR Portfolio Manager
-      - Match to building locations
-      - Score based on ENERGY STAR score (1-100 normalized to 0-1)
-    """
     filepath = RAW_DATA_DIR / "energy_star.csv"
-    if filepath.exists():
-        # TODO: Parse CSV
-        pass
-    print("[WARN] ENERGY STAR data not found. Using defaults.")
+    if not filepath.exists():
+        print("[WARN] ENERGY STAR data not found. Using defaults.")
     return {}
 
-
-# =============================================================================
-# WATER COST DATA
-# =============================================================================
 
 def load_water_costs() -> dict:
-    """
-    Load water cost data by city/utility.
-
-    Expected file: data/raw/water_costs.csv
-
-    TODO (Person 2):
-      - Source water rate data (Circle of Blue, utility rate surveys)
-      - Map to building locations
-      - Normalize to 0-1 scale (higher cost = higher score)
-    """
     filepath = RAW_DATA_DIR / "water_costs.csv"
-    if filepath.exists():
-        # TODO: Parse CSV
-        pass
-    print("[WARN] Water cost data not found. Using defaults.")
+    if not filepath.exists():
+        print("[WARN] Water cost data not found. Using defaults.")
     return {}
 
 
-def main():
-    """Test all enrichment data loaders."""
+# ---------------------------------------------------------------------------
+# Main enrichment pipeline
+# ---------------------------------------------------------------------------
+
+def enrich_buildings(input_csv: Path, output_csv: Path) -> pd.DataFrame:
+    """
+    Load buildings_scored.csv, apply ESG / incentive enrichments, and save
+    to buildings_enriched.csv.
+
+    Returns the enriched DataFrame.
+    """
+    if not input_csv.exists():
+        print(f"[WARN] Input file not found: {input_csv}")
+        print("       Run the scoring pipeline first to generate buildings_scored.csv")
+        return pd.DataFrame()
+
+    print(f"[enrich] Loading {input_csv}...")
+    df = pd.read_csv(input_csv)
+    df.columns = [str(c).strip().lower() for c in df.columns]
+    print(f"[enrich]   {len(df):,} buildings loaded")
+
+    # -- ESG score ---------------------------------------------------------
+    print("[enrich] Computing ESG scores...")
+    df["esg_score"] = df.apply(compute_esg_score, axis=1)
+
+    # -- LEED score --------------------------------------------------------
+    print("[enrich] Computing LEED scores...")
+    df["leed_score"] = df.apply(compute_leed_score, axis=1)
+
+    # -- Stormwater fee & local incentive score ----------------------------
+    print("[enrich] Computing stormwater incentive scores...")
+    df["stormwater_fee_per_kgal"] = df["state"].apply(compute_stormwater_fee)
+    df["local_incentive_score"]   = df["state"].apply(compute_local_incentive_score)
+
+    # -- Save output -------------------------------------------------------
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_csv, index=False)
+    print(f"[enrich] Saved {len(df):,} enriched buildings → {output_csv}")
+
+    # Summary
+    print("\n[enrich] ESG score distribution:")
+    print(df["esg_score"].describe().round(3).to_string())
+    print("\n[enrich] Local incentive score distribution:")
+    print(df["local_incentive_score"].describe().round(3).to_string())
+
+    return df
+
+
+def main() -> None:
+    input_csv  = PROCESSED_DIR / "buildings_scored.csv"
+    output_csv = PROCESSED_DIR / "buildings_enriched.csv"
+
     print("=" * 60)
-    print("RainUSE Nexus — Enrichment Data Loading Test")
+    print("RainUSE Nexus — ESG & Incentive Enrichment Pipeline")
     print("=" * 60)
 
-    print("\n[1] Visual Inspection Results")
-    load_visual_inspection_results()
+    df = enrich_buildings(input_csv, output_csv)
 
-    print("\n[2] OSM Cooling Tower Tags")
-    load_osm_cooling_tags()
-
-    print("\n[3] FEMA Flood Risk")
-    load_fema_flood_risk()
-
-    print("\n[4] Water Stress")
-    load_water_stress()
-
-    print("\n[5] EPA ECHO Facilities")
-    load_epa_echo_facilities()
-
-    print("\n[6] SBTi / ESG")
-    load_sbti_esg_data()
-
-    print("\n[7] LEED Certifications")
-    load_leed_certifications()
-
-    print("\n[8] ENERGY STAR Certifications")
-    load_energy_star_certifications()
-
-    print("\n[9] Water Costs")
-    load_water_costs()
-
-    print("\n[DONE] All enrichment loaders tested.")
+    if df.empty:
+        print("\n[DONE] No buildings processed (input file missing).")
+    else:
+        print(f"\n[DONE] Enrichment complete. Output: {output_csv}")
 
 
 if __name__ == "__main__":

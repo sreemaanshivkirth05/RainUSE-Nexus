@@ -131,7 +131,7 @@ function BuildingPopup({ building }) {
           gridTemplateColumns: '1fr 1fr',
           gap: '6px 12px',
           fontSize: 11,
-          marginBottom: 12,
+          marginBottom: 10,
         }}
       >
         <div>
@@ -147,6 +147,38 @@ function BuildingPopup({ building }) {
           </div>
         </div>
       </div>
+
+      {/* AI Cooling Confidence */}
+      {building.cooling_confidence != null && (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#52525b', marginBottom: 3 }}>
+            <span>AI COOLING CONFIDENCE</span>
+            <span style={{
+              color: Number(building.cooling_confidence) >= 0.8 ? '#10b981'
+                : Number(building.cooling_confidence) >= 0.6 ? '#f59e0b'
+                : '#ef4444',
+              fontWeight: 700,
+            }}>
+              {Math.round(Number(building.cooling_confidence) * 100)}%
+            </span>
+          </div>
+          <div style={{ height: 4, background: '#27272a', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${Math.round(Number(building.cooling_confidence) * 100)}%`,
+              background: Number(building.cooling_confidence) >= 0.8 ? '#10b981'
+                : Number(building.cooling_confidence) >= 0.6 ? '#f59e0b'
+                : '#ef4444',
+              borderRadius: 2,
+            }} />
+          </div>
+          {building.visual_notes && (
+            <div style={{ fontSize: 10, color: '#71717a', marginTop: 4, lineHeight: 1.4 }}>
+              {String(building.visual_notes).slice(0, 100)}{String(building.visual_notes).length > 100 ? '…' : ''}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* CTA */}
       <button
