@@ -1,0 +1,54 @@
+# RainUSE Nexus — Data Source Registry
+#
+# This file defines all CSV data sources that feed the buildings_serving table.
+# Each source maps to a raw BigQuery table and a local CSV for development.
+#
+# To add a new data source:
+#   1. Add an entry below with its column mappings
+#   2. Create a detailed schema file in config/sources/<source_id>.yaml
+#   3. Drop the CSV into the GCS bucket (or sample-data/ for local dev)
+#   4. Add a raw table DDL in sql/schema/
+#   5. Update sql/transformations/raw_to_staging.sql to join it in
+#   6. Run `make seed` (local) or `make pipeline-bq-full` (BigQuery)
+
+sources:
+  - id: buildings_base
+    label: "Building Base Records"
+    description: "Core building identity, location, and physical attributes"
+    priority: P0
+    gcs_path: "raw/buildings_base.csv"
+    local_path: "sample-data/buildings_base.csv"
+    raw_table: "buildings_base"
+    join_key: building_id
+    schema_file: "config/sources/buildings_base.yaml"
+
+  - id: building_metrics
+    label: "Building Metric Scores"
+    description: "Rainwater, cooling, economic, and sustainability metrics"
+    priority: P0
+    gcs_path: "raw/building_metrics.csv"
+    local_path: "sample-data/building_metrics.csv"
+    raw_table: "building_metrics"
+    join_key: building_id
+    schema_file: "config/sources/building_metrics.yaml"
+
+# BigQuery dataset configuration
+bigquery:
+  project: "${BIGQUERY_PROJECT}"
+  raw_dataset: "rainuse_raw"
+  staging_dataset: "rainuse_staging"
+  serving_dataset: "rainuse_serving"
+  serving_table: "buildings_serving"
+  location: "US"
+
+# Adding a new CSV source:
+#
+#   - id: water_utility_rates
+#     label: "Municipal Water Rates"
+#     description: "Water pricing per municipality"
+#     priority: P1
+#     gcs_path: "raw/water_utility_rates.csv"
+#     local_path: "sample-data/water_utility_rates.csv"
+#     raw_table: "water_utility_rates"
+#     join_key: state
+#     schema_file: "config/sources/water_utility_rates.yaml"

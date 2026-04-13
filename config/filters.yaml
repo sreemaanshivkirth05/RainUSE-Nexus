@@ -1,0 +1,138 @@
+# RainUSE Nexus — Filter Configuration
+#
+# This file defines all available filters for the frontend UI.
+# Adding a new filter here automatically makes it available in the API
+# and renders it in the frontend filter sidebar.
+#
+# Filter types:
+#   multi_select  — dropdown/checkbox list of discrete values
+#   range         — numeric slider with min/max
+#   boolean       — toggle switch
+#   text_search   — free-text search (future)
+
+filters:
+  - id: state
+    label: "State"
+    type: multi_select
+    column: state
+    description: "Filter by U.S. state"
+
+  - id: city
+    label: "City"
+    type: multi_select
+    column: city
+    description: "Filter by city"
+    depends_on: state  # city options refresh when state changes
+
+  - id: opportunity_type
+    label: "Opportunity Type"
+    type: multi_select
+    column: opportunity_type
+    description: "Classification of the harvesting opportunity"
+
+  - id: viability_score
+    label: "Viability Score"
+    type: range
+    column: final_viability_score
+    min: 0
+    max: 100
+    step: 1
+    default_min: 0
+    description: "Overall viability score (0–100)"
+
+  - id: roof_area
+    label: "Roof Area (sq ft)"
+    type: range
+    column: roof_area_sqft
+    min: 0
+    max: 500000
+    step: 1000
+    default_min: 0
+    description: "Total roof catchment area in square feet"
+
+  - id: annual_capture
+    label: "Annual Capture (gallons)"
+    type: range
+    column: annual_capture_gallons
+    min: 0
+    max: 15000000
+    step: 100000
+    default_min: 0
+    description: "Estimated annual rainwater harvest volume"
+
+  - id: roof_over_100k
+    label: "Large Roof (>100k sqft)"
+    type: boolean
+    column: roof_over_100k
+    description: "Only show buildings with roof area over 100,000 sq ft"
+
+  - id: annual_rainfall
+    label: "Annual Rainfall (inches)"
+    type: range
+    column: annual_rain_inches
+    min: 0
+    max: 80
+    step: 1
+    default_min: 0
+    description: "Average annual precipitation"
+
+  - id: cooling_tower
+    label: "Cooling Tower Score"
+    type: range
+    column: cooling_tower_score
+    min: 0.0
+    max: 1.0
+    step: 0.05
+    default_min: 0.0
+    description: "Likelihood of cooling tower presence (0.0–1.0)"
+
+  - id: water_stress
+    label: "Water Stress Score"
+    type: range
+    column: water_stress_score
+    min: 0.0
+    max: 1.0
+    step: 0.05
+    default_min: 0.0
+    description: "Regional water scarcity index (0.0–1.0)"
+
+  - id: esg_score
+    label: "ESG Score"
+    type: range
+    column: esg_score
+    min: 0.0
+    max: 1.0
+    step: 0.05
+    default_min: 0.0
+    description: "ESG commitment indicator (0.0–1.0)"
+
+# Sort options available in the UI
+sort_options:
+  - field: final_viability_score
+    label: "Viability Score"
+    default_direction: desc
+
+  - field: roof_area_sqft
+    label: "Roof Area"
+    default_direction: desc
+
+  - field: annual_capture_gallons
+    label: "Annual Capture"
+    default_direction: desc
+
+  - field: annual_rain_inches
+    label: "Annual Rainfall"
+    default_direction: desc
+
+  - field: water_stress_score
+    label: "Water Stress"
+    default_direction: desc
+
+  - field: name
+    label: "Name"
+    default_direction: asc
+
+# Default pagination
+pagination:
+  default_page_size: 25
+  max_page_size: 100

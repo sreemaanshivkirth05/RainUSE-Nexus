@@ -1,0 +1,160 @@
+# RainUSE Nexus — Metric Definitions
+#
+# This file defines all computed metrics that appear in the serving table
+# and are available for filtering/display in the UI.
+#
+# To add a new metric:
+#   1. Add the source column in the appropriate config/sources/*.yaml
+#   2. Add a metric entry below
+#   3. Update sql/transformations/staging_to_serving.sql to include it
+#   4. Run the pipeline to rebuild the serving table
+#   5. Optionally add a filter for it in config/filters.yaml
+
+metrics:
+  # --- Rainwater Harvest Metrics ---
+  - id: roof_area_sqft
+    label: "Roof Catchment Area"
+    unit: "sq ft"
+    type: numeric
+    source: building_metrics
+    column: roof_area_sqft
+    description: "Effective roof area available for rainwater collection"
+    filterable: true
+    display_format: "{:,.0f}"
+
+  - id: annual_rain_inches
+    label: "Annual Rainfall"
+    unit: "inches"
+    type: numeric
+    source: building_metrics
+    column: annual_rain_inches
+    description: "Average annual precipitation at building location"
+    filterable: true
+    display_format: "{:.1f}"
+
+  - id: annual_capture_gallons
+    label: "Annual Capture Volume"
+    unit: "gallons"
+    type: numeric
+    source: building_metrics
+    column: annual_capture_gallons
+    description: "Estimated gallons of rainwater harvestable per year"
+    filterable: true
+    display_format: "{:,.0f}"
+
+  # --- Cooling / Demand Metrics ---
+  - id: cooling_tower_score
+    label: "Cooling Tower Score"
+    unit: "0–1"
+    type: score
+    source: building_metrics
+    column: cooling_tower_score
+    description: "Likelihood of cooling tower presence based on imagery analysis"
+    filterable: true
+    display_format: "{:.2f}"
+
+  - id: cooling_confidence
+    label: "Cooling Confidence"
+    unit: "0–1"
+    type: score
+    source: building_metrics
+    column: cooling_confidence
+    description: "Confidence level of cooling tower detection"
+    filterable: false
+    display_format: "{:.2f}"
+
+  # --- Economic Metrics ---
+  - id: water_cost_per_kgal
+    label: "Water Cost"
+    unit: "$/kgal"
+    type: numeric
+    source: building_metrics
+    column: water_cost_per_kgal
+    description: "Local municipal water cost per 1,000 gallons"
+    filterable: true
+    display_format: "${:.2f}"
+
+  - id: water_stress_index
+    label: "Water Stress"
+    unit: "0–1"
+    type: score
+    source: building_metrics
+    column: water_stress_index
+    description: "Regional water scarcity index (higher = more stressed)"
+    filterable: true
+    display_format: "{:.2f}"
+
+  # --- Resilience Metrics ---
+  - id: flood_risk_score
+    label: "Flood Risk"
+    unit: "0–1"
+    type: score
+    source: building_metrics
+    column: flood_risk_score
+    description: "FEMA-based flood risk factor"
+    filterable: true
+    display_format: "{:.2f}"
+
+  # --- Sustainability Metrics ---
+  - id: esg_commitment_score
+    label: "ESG Score"
+    unit: "0–1"
+    type: score
+    source: building_metrics
+    column: esg_commitment_score
+    description: "Owner ESG / sustainability commitment indicator"
+    filterable: true
+    display_format: "{:.2f}"
+
+  - id: energy_star_rating
+    label: "ENERGY STAR Rating"
+    unit: "0–100"
+    type: numeric
+    source: building_metrics
+    column: energy_star_rating
+    description: "EPA ENERGY STAR score"
+    filterable: true
+    display_format: "{:d}"
+
+  - id: leed_certified
+    label: "LEED Certified"
+    unit: ""
+    type: boolean
+    source: building_metrics
+    column: leed_certified
+    description: "Whether the building holds LEED certification"
+    filterable: true
+
+  - id: state_policy_score
+    label: "State Policy Score"
+    unit: "0–1"
+    type: score
+    source: building_metrics
+    column: state_policy_score
+    description: "State-level rainwater policy favorability"
+    filterable: false
+    display_format: "{:.2f}"
+
+  - id: stormwater_fee_eligible
+    label: "Stormwater Credit Eligible"
+    unit: ""
+    type: boolean
+    source: building_metrics
+    column: stormwater_fee_eligible
+    description: "Building qualifies for stormwater fee credit program"
+    filterable: true
+
+# --- Composite / Computed Metrics ---
+# These are calculated in the staging → serving transformation
+computed_metrics:
+  - id: viability_score
+    label: "Viability Score"
+    unit: "0–100"
+    description: "Weighted composite score combining all factors"
+    formula: "See sql/transformations/staging_to_serving.sql"
+    filterable: true
+
+  - id: opportunity_type
+    label: "Opportunity Type"
+    description: "Classification: Cooling-Demand-Driven, Rainfall-Driven, Resilience-Driven, Balanced"
+    filterable: true
