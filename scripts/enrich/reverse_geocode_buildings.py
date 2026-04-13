@@ -294,20 +294,20 @@ def main() -> None:
     scored_json = PROCESSED_DIR / "buildings_scored.json"
 
     shutil.copy2(GEOCODED_CSV,  scored_csv)
-    print(f"Copied → {scored_csv.name}")
+    print(f"Copied -> {scored_csv.name}")
 
     shutil.copy2(GEOCODED_JSON, scored_json)
-    print(f"Copied → {scored_json.name}")
+    print(f"Copied -> {scored_json.name}")
 
     # Also update top_1000_buildings files in-place
     top_1000_csv  = PROCESSED_DIR / "top_1000_buildings.csv"
     top_1000_json = PROCESSED_DIR / "top_1000_buildings.json"
 
     shutil.copy2(GEOCODED_CSV,  top_1000_csv)
-    print(f"Copied → {top_1000_csv.name}")
+    print(f"Copied -> {top_1000_csv.name}")
 
     shutil.copy2(GEOCODED_JSON, top_1000_json)
-    print(f"Copied → {top_1000_json.name}")
+    print(f"Copied -> {top_1000_json.name}")
 
     print("\n[DONE] Geocoding complete.")
     print("Next: python scripts/export/build_processed_outputs.py")

@@ -175,6 +175,38 @@ def main():
         buildings = json.load(f)
     print(f"Loaded {len(buildings)} buildings")
 
+    # Coerce numeric fields that may have been serialised as strings
+    # (happens when the JSON was produced by csv.DictReader)
+    _FLOAT_FIELDS = {
+        "latitude", "longitude", "roof_area_sqft", "annual_rain_inches",
+        "annual_capture_gallons", "cooling_tower_score", "cooling_confidence",
+        "cooling_degree_days_score", "building_type_score", "facility_score",
+        "water_cost_score", "state_policy_score", "local_incentive_score",
+        "improvement_value_score", "flood_score", "water_stress_score",
+        "esg_score", "leed_score", "energy_star_score", "base_viability_score",
+        "roof_area_score", "roof_threshold_bonus", "annual_precip_score",
+        "annual_capture_score", "rectangularity_score", "shape_compactness",
+        "confidence_multiplier", "water_stress_score", "roof_geometry_quality_score",
+    }
+    _INT_FIELDS = {"final_viability_score", "global_rank"}
+    _BOOL_FIELDS = {"roof_over_100k"}
+    for b in buildings:
+        for f in _FLOAT_FIELDS:
+            if f in b and isinstance(b[f], str):
+                try:
+                    b[f] = float(b[f])
+                except (ValueError, TypeError):
+                    b[f] = 0.0
+        for f in _INT_FIELDS:
+            if f in b and isinstance(b[f], str):
+                try:
+                    b[f] = int(float(b[f]))
+                except (ValueError, TypeError):
+                    b[f] = 0
+        for f in _BOOL_FIELDS:
+            if f in b and isinstance(b[f], str):
+                b[f] = b[f].strip().lower() in ("true", "1", "yes")
+
     # Build summary
     print("\nBuilding summary...")
     summary = build_summary(buildings)

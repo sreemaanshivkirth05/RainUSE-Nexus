@@ -41,6 +41,13 @@ data/processed/**
 !data/processed/top_100_by_state.json
 !data/processed/top_500_buildings.csv
 !data/processed/top_500_buildings.json
+!data/processed/buildings_geocoded.csv
+!data/processed/buildings_geocoded.json
+!data/processed/top_1000_buildings.csv
+!data/processed/top_1000_buildings.json
+!data/processed/top_500_by_state.csv
+!data/processed/top_500_by_state.json
+!data/processed/top_100_by_state.csv
 
 # Environment
 .env
