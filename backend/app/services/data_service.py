@@ -1,6 +1,16 @@
 from sqlalchemy import text
 from app.db.connection import engine
 
+# State code (2-letter) -> full state name as stored in the DB
+STATE_CODE_TO_NAME = {
+    "TX": "Texas", "FL": "Florida", "GA": "Georgia", "NC": "North Carolina",
+    "LA": "Louisiana", "AL": "Alabama", "SC": "South Carolina", "TN": "Tennessee",
+    "VA": "Virginia", "MS": "Mississippi", "AR": "Arkansas", "KY": "Kentucky",
+    "OK": "Oklahoma", "MO": "Missouri", "MD": "Maryland", "DE": "Delaware",
+    "AZ": "Arizona", "NM": "New Mexico", "KS": "Kansas", "IN": "Indiana",
+    "IL": "Illinois", "WV": "West Virginia",
+}
+
 ALLOWED_SORT_FIELDS = [
     "final_viability_score",
     "roof_area_sqft",
@@ -181,6 +191,38 @@ def get_state_summaries():
     with engine.connect() as conn:
         rows = conn.execute(sql).mappings().all()
         return [dict(r) for r in rows]
+
+def get_state_buildings(state_code: str, limit: int = 200, min_score: int = 0, sort_by: str = "final_viability_score"):
+    """Return top buildings for a specific state by 2-letter code."""
+    code = state_code.upper().strip()
+    state_name = STATE_CODE_TO_NAME.get(code, code)  # fall back to using the code itself
+
+    if sort_by not in ALLOWED_SORT_FIELDS:
+        sort_by = "final_viability_score"
+
+    limit = max(1, min(limit, 500))
+
+    params = {"state": state_name, "min_score": min_score, "limit": limit}
+    select_sql = text(f"""
+        SELECT * FROM buildings
+        WHERE state = :state AND final_viability_score >= :min_score
+        ORDER BY {sort_by} DESC
+        LIMIT :limit
+    """)
+    count_sql = text("SELECT COUNT(*) FROM buildings WHERE state = :state")
+
+    with engine.connect() as conn:
+        rows = conn.execute(select_sql, params).mappings().all()
+        total = conn.execute(count_sql, {"state": state_name}).scalar() or 0
+
+    return {
+        "state_code": code,
+        "state_name": state_name,
+        "count": len(rows),
+        "total_in_state": total,
+        "buildings": [dict(r) for r in rows],
+    }
+
 
 def get_summary():
     with engine.connect() as conn:

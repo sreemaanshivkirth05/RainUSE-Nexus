@@ -9,7 +9,17 @@
 
 ## Live Demo
 
-[DEMO URL HERE]
+[DEMO URL - update after deploy]
+
+## Deploy Frontend
+
+```bash
+cd frontend
+npm install -g vercel
+vercel --prod
+```
+
+Set `VITE_API_URL` to your backend URL in the Vercel dashboard (or update `.env.production` before deploying).
 
 ---
 

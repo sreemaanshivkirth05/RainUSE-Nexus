@@ -47,4 +47,5 @@ def root():
         "message": f"Welcome to {API_TITLE}",
         "docs": "/docs",
         "health": "/health",
+        "version": "geocoded",
     }

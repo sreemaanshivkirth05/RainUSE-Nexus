@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, FileText, Activity, Layers, Repeat, Eye, HardHat, Droplets } from 'lucide-react';
+import { MapPin, FileText, Activity, Layers, Repeat, Eye, HardHat, Droplets, Leaf } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import { formatGallons, formatSqft, formatRainfall } from '../utils/formatters';
 import OpportunityBadge from '../components/buildings/OpportunityBadge';
@@ -12,6 +12,88 @@ import LoadingState from '../components/shared/LoadingState';
 import { useBuildingDetail } from '../hooks/useBuildings';
 
 const SatelliteView = lazy(() => import('../components/buildings/SatelliteView'));
+
+const TIER_STYLES = {
+  'High ESG':     { bg: 'bg-emerald-950/60', border: 'border-emerald-500/40', text: 'text-emerald-300', dot: 'bg-emerald-400' },
+  'Moderate ESG': { bg: 'bg-teal-950/60',    border: 'border-teal-500/40',    text: 'text-teal-300',   dot: 'bg-teal-400'    },
+  'Emerging ESG': { bg: 'bg-amber-950/60',   border: 'border-amber-500/40',   text: 'text-amber-300',  dot: 'bg-amber-400'   },
+  'Standard':     { bg: 'bg-zinc-900/60',    border: 'border-zinc-700/50',    text: 'text-zinc-400',   dot: 'bg-zinc-500'    },
+};
+
+function ProgressBar({ label, value, color = 'bg-emerald-500', pct }) {
+  const display = pct != null ? pct : Math.round((value || 0) * 100);
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-1.5">
+        <span className="text-xs text-zinc-500 font-mono uppercase tracking-wider">{label}</span>
+        <span className="text-xs font-medium text-zinc-300">{display}%</span>
+      </div>
+      <div className="h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+        <div className={`h-full rounded-full ${color} transition-all duration-700`} style={{ width: `${Math.min(display, 100)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function SustainabilitySignals({ building }) {
+  const tier = building.sustainability_tier || 'Standard';
+  const style = TIER_STYLES[tier] || TIER_STYLES['Standard'];
+
+  const esgScore  = Number(building.esg_score  || 0);
+  const leedScore = Number(building.leed_score  || 0);
+  const esScore   = Number(building.energy_star_score || 0);
+  const stateBase = Number(building.state_esg_baseline || 0);
+
+  // Show section only if there's something meaningful
+  const hasData = esgScore > 0 || building.leed_certified || building.energy_star_certified;
+  if (!hasData) return null;
+
+  return (
+    <div className="p-6 md:p-8 rounded bg-zinc-900/30 border border-white/5">
+      <h3 className="font-display font-medium text-xl text-zinc-200 mb-6 tracking-wide flex items-center gap-2">
+        <Leaf className="w-5 h-5 text-emerald-500" /> Sustainability Signals
+      </h3>
+
+      {/* Tier badge + certification badges */}
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold ${style.bg} ${style.border} ${style.text}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+          {tier}
+        </span>
+
+        {building.leed_certified && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-yellow-950/60 border-yellow-500/40 text-yellow-300 text-xs font-semibold">
+            ★ LEED {building.leed_level ? `(${building.leed_level})` : 'Certified'}
+          </span>
+        )}
+
+        {building.energy_star_certified && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border bg-blue-950/60 border-blue-500/40 text-blue-300 text-xs font-semibold">
+            ⚡ Energy Star Certified
+          </span>
+        )}
+      </div>
+
+      {/* Progress bars */}
+      <div className="space-y-4">
+        <ProgressBar label="ESG Score"        value={esgScore}  color="bg-emerald-500" />
+        <ProgressBar label="LEED Score"       value={leedScore} color="bg-yellow-500"  />
+        <ProgressBar label="Energy Star Score" value={esScore}  color="bg-blue-500"    />
+      </div>
+
+      {/* State policy score */}
+      {stateBase > 0 && (
+        <div className="mt-5 pt-5 border-t border-white/5 flex justify-between items-center">
+          <span className="text-xs text-zinc-500 font-mono uppercase tracking-wider">State ESG Policy</span>
+          <span className="text-sm font-medium text-zinc-300">
+            {Math.round(stateBase * 100)}%
+            <span className="text-xs text-zinc-600 ml-1 font-normal">({building.state})</span>
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function BuildingDetails() {
   const { id } = useParams();
@@ -306,6 +388,8 @@ export default function BuildingDetails() {
             <h3 className="font-display font-medium text-xl text-zinc-200 mb-6 tracking-wide">Metric Breakdown</h3>
             <ScoreBreakdown building={building} />
           </div>
+
+          <SustainabilitySignals building={building} />
 
           <ROIPanel building={building} />
         </div>

@@ -7,6 +7,7 @@ import BuildingDetails from './pages/BuildingDetails';
 import Methodology from './pages/Methodology';
 import Compare from './pages/Compare';
 import MapView from './pages/MapView';
+import StateInsights from './pages/StateInsights';
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/methodology" element={<Methodology />} />
             <Route path="/compare" element={<Compare />} />
             <Route path="/map" element={<MapView />} />
+            <Route path="/states" element={<StateInsights />} />
           </Routes>
         </main>
       </div>

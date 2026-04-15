@@ -72,6 +72,7 @@ export const FEATURE_GROUPS = [
 export const NAV_ITEMS = [
   { path: '/', label: 'Explorer', icon: '🗺️' },
   { path: '/buildings', label: 'Prospects', icon: '🏢' },
+  { path: '/states', label: 'State Insights', icon: '📊' },
   { path: '/map', label: 'Map View', icon: '📍' },
   { path: '/compare', label: 'Compare', icon: '⚖️' },
   { path: '/methodology', label: 'Methodology', icon: '📐' }

@@ -87,6 +87,14 @@ export interface StatesResponse {
   states: StateSummary[];
 }
 
+export interface StateBuildingsResponse {
+  state_code: string;
+  state_name: string;
+  count: number;
+  total_in_state: number;
+  buildings: Building[];
+}
+
 export interface HealthResponse {
   status: string;
 }
@@ -153,4 +161,16 @@ export const apiClient = {
 
   buildingDetail: (id: string): Promise<Building> =>
     get<Building>(`/buildings/${id}`),
+
+  stateBuildings: (
+    stateCode: string,
+    params: { limit?: number; min_score?: number; sort?: string } = {}
+  ): Promise<StateBuildingsResponse> => {
+    const p = new URLSearchParams();
+    if (params.limit   != null) p.append('limit',     String(params.limit));
+    if (params.min_score != null) p.append('min_score', String(params.min_score));
+    if (params.sort)              p.append('sort',      params.sort);
+    const qs = p.toString() ? `?${p.toString()}` : '';
+    return get<StateBuildingsResponse>(`/states/${encodeURIComponent(stateCode)}/buildings${qs}`);
+  },
 };

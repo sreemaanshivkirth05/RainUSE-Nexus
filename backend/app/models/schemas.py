@@ -94,6 +94,30 @@ class BuildingDetail(BuildingResult):
     local_incentive_score: float = 0.0
     improvement_value_score: float = 0.0
     base_viability_score: float = 0.0
+    # ESG enrichment fields
+    leed_certified: Optional[bool] = None
+    energy_star_certified: Optional[bool] = None
+    leed_level: Optional[str] = None
+    leed_match_method: Optional[str] = None
+    es_match_method: Optional[str] = None
+    state_esg_baseline: Optional[float] = None
+    sustainability_tier: Optional[str] = None
+    esg_comp_a_policy: Optional[float] = None
+    esg_comp_b_cert: Optional[float] = None
+    esg_comp_c_type: Optional[float] = None
+    esg_comp_d_compliance: Optional[float] = None
+    esg_component_breakdown: Optional[str] = None
+    # Enriched address / visual fields
+    building_name: Optional[str] = None
+    short_address: Optional[str] = None
+    zip_code: Optional[str] = None
+    global_rank: Optional[int] = None
+    visual_notes: Optional[str] = None
+    roof_geometry_quality_score: Optional[float] = None
+    annual_precip_score: Optional[float] = None
+    annual_capture_score: Optional[float] = None
+    roof_area_score: Optional[float] = None
+    confidence_multiplier: Optional[float] = None
 
 
 # ---------------------------------------------------------------------------
