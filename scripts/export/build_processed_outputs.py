@@ -45,11 +45,25 @@ TOP_1000_CSV          = PROCESSED_DATA_DIR / "top_1000_buildings.csv"
 TOP_500_BY_STATE_JSON = PROCESSED_DATA_DIR / "top_500_by_state.json"
 TOP_500_BY_STATE_CSV  = PROCESSED_DATA_DIR / "top_500_by_state.csv"
 
+# Top-200-per-state (new, with nested structure keyed by state code)
+TOP_200_BY_STATE_JSON = PROCESSED_DATA_DIR / "top_200_by_state.json"
+TOP_200_BY_STATE_CSV  = PROCESSED_DATA_DIR / "top_200_by_state.csv"
+
 # Backward-compat outputs (kept so existing API/code doesn't break)
 TOP_500_JSON          = PROCESSED_DATA_DIR / "top_500_buildings.json"
 TOP_500_CSV           = PROCESSED_DATA_DIR / "top_500_buildings.csv"
 TOP_100_BY_STATE_JSON = PROCESSED_DATA_DIR / "top_100_by_state.json"
 TOP_100_BY_STATE_CSV  = PROCESSED_DATA_DIR / "top_100_by_state.csv"
+
+# State name -> 2-letter code mapping
+STATE_CODES = {
+    "Texas": "TX", "Florida": "FL", "Georgia": "GA", "North Carolina": "NC",
+    "Louisiana": "LA", "Alabama": "AL", "South Carolina": "SC", "Tennessee": "TN",
+    "Virginia": "VA", "Mississippi": "MS", "Arkansas": "AR", "Kentucky": "KY",
+    "Oklahoma": "OK", "Missouri": "MO", "Maryland": "MD", "Delaware": "DE",
+    "Arizona": "AZ", "New Mexico": "NM", "Kansas": "KS", "Indiana": "IN",
+    "Illinois": "IL", "West Virginia": "WV",
+}
 
 
 def build_summary(buildings: list[dict]) -> dict:
@@ -236,31 +250,67 @@ def main():
     _write_json(TOP_500_JSON, top_500)
     _write_csv(TOP_500_CSV, top_500)
 
-    # --- Top-500 per state ---
+    # --- Top-200/500 per state ---
     state_groups: dict[str, list] = defaultdict(list)
     for b in sorted_bldgs:
         state_groups[b.get("state", "Unknown")].append(b)
 
     top_500_by_state = []
+    top_200_by_state_flat = []
     top_100_by_state = []
-    for state_bldgs in state_groups.values():
+    top_200_by_state_dict: dict = {}
+
+    for state_name, state_bldgs in state_groups.items():
         top_500_by_state.extend(state_bldgs[:500])
         top_100_by_state.extend(state_bldgs[:100])
 
+        top200 = state_bldgs[:200]
+        top_200_by_state_flat.extend(top200)
+
+        count = len(top200)
+        state_code = STATE_CODES.get(state_name, state_name[:2].upper())
+        avg_score   = round(sum(b.get("final_viability_score", 0) for b in top200) / count, 1) if count else 0
+        avg_roof    = round(sum(b.get("roof_area_sqft", 0) for b in top200) / count, 0) if count else 0
+        avg_capture = round(sum(b.get("annual_capture_gallons", 0) for b in top200) / count, 0) if count else 0
+        opp_types   = [b.get("opportunity_type", "") for b in top200]
+        top_opp     = max(set(opp_types), key=opp_types.count) if opp_types else "Unknown"
+
+        top_200_by_state_dict[state_code] = {
+            "state": state_code,
+            "state_name": state_name,
+            "building_count": count,
+            "avg_viability_score": avg_score,
+            "avg_roof_area_sqft": avg_roof,
+            "avg_annual_capture_gallons": avg_capture,
+            "top_opportunity_type": top_opp,
+            "buildings": top200,
+        }
+
     _write_json(TOP_500_BY_STATE_JSON, top_500_by_state)
     _write_csv(TOP_500_BY_STATE_CSV, top_500_by_state)
+
+    # New top-200-per-state with nested structure
+    TOP_200_BY_STATE_JSON.parent.mkdir(parents=True, exist_ok=True)
+    with open(TOP_200_BY_STATE_JSON, "w") as f:
+        json.dump(top_200_by_state_dict, f, indent=2)
+    print(f"  Wrote {TOP_200_BY_STATE_JSON.name} ({len(top_200_by_state_dict)} state entries)")
+    _write_csv(TOP_200_BY_STATE_CSV, top_200_by_state_flat)
 
     # Backward-compat top-100-per-state
     _write_json(TOP_100_BY_STATE_JSON, top_100_by_state)
     _write_csv(TOP_100_BY_STATE_CSV, top_100_by_state)
 
     # --- Final verification ---
+    n_states = len(top_200_by_state_dict)
+    avg_per_state = len(top_200_by_state_flat) / n_states if n_states else 0
     print("\n[COUNTS]")
     print(f"  top_1000_buildings:  {len(top_1000):,}")
     print(f"  top_500_buildings:   {len(top_500):,} (compat)")
+    print(f"  top_200_by_state:    {len(top_200_by_state_flat):,} ({n_states} states)")
     print(f"  top_500_by_state:    {len(top_500_by_state):,}")
     print(f"  top_100_by_state:    {len(top_100_by_state):,} (compat)")
 
+    print(f"\nState export complete: {n_states} states, avg {avg_per_state:.0f} buildings/state")
     print("\n[DONE] Processed outputs built.")
 
 

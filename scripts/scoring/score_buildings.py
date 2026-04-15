@@ -8,7 +8,9 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 
-INPUT_FILE = PROCESSED_DIR / "buildings_stage2b.csv"
+_STAGE2B = PROCESSED_DIR / "buildings_stage2b.csv"
+_FALLBACK = PROCESSED_DIR / "buildings_scored.csv"
+INPUT_FILE = _STAGE2B if _STAGE2B.exists() else _FALLBACK
 
 SCORED_CSV = PROCESSED_DIR / "buildings_scored.csv"
 SCORED_JSON = PROCESSED_DIR / "buildings_scored.json"
@@ -38,7 +40,10 @@ def log(msg: str) -> None:
 
 def require_file(path: Path) -> None:
     if not path.exists():
-        raise FileNotFoundError(f"Missing required file: {path}")
+        raise FileNotFoundError(
+            f"Missing required file: {path}\n"
+            "Run enrichment scripts first, or ensure buildings_scored.csv exists."
+        )
 
 
 def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -154,6 +159,8 @@ def score_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         "water_cost_score",
         "state_policy_score",
         "local_incentive_score",
+        "flood_score",
+        "water_stress_score",
         "roof_geometry_quality_score",
     ]
     missing = [c for c in required if c not in df.columns]
@@ -169,19 +176,26 @@ def score_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
-    # Score only with currently usable real features
+    # Full scoring formula — weights sum to 1.0
+    # Physical (30%): roof + geometry + climate
+    # Demand  (18%): cooling tower + CDD + facility
+    # Economic(19%): water cost + policy + incentive
+    # Resilience(15%): flood + water stress
+    # Geometry( 8%): roof quality (shared w/ physical)
     df["base_viability_score"] = (
-        0.15 * df["roof_area_score"] +
+        0.12 * df["roof_area_score"] +
         0.05 * df["roof_threshold_bonus"] +
         0.07 * df["annual_precip_score"] +
-        0.12 * df["annual_capture_score"] +
-        0.11 * df["cooling_tower_score"] +
+        0.10 * df["annual_capture_score"] +
+        0.09 * df["cooling_tower_score"] +
         0.07 * df["cooling_degree_days_score"] +
-        0.09 * df["facility_score"] +
-        0.10 * df["water_cost_score"] +
+        0.06 * df["facility_score"] +
+        0.08 * df["water_cost_score"] +
         0.07 * df["state_policy_score"] +
         0.05 * df["local_incentive_score"] +
-        0.12 * df["roof_geometry_quality_score"]
+        0.08 * df["flood_score"] +
+        0.07 * df["water_stress_score"] +
+        0.09 * df["roof_geometry_quality_score"]
     ).round(6)
 
     df["confidence_multiplier"] = df["cooling_confidence"].apply(confidence_multiplier)
